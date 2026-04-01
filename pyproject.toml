@@ -1,0 +1,21 @@
+[project]
+name = "itk-clear"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.13.4",
+    "aiokafka>=0.13.0",
+    "alembic>=1.18.4",
+    "asyncpg>=0.31.0",
+    "dependency-injector>=4.49.0",
+    "fastapi>=0.135.2",
+    "loguru>=0.7.3",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "ruff>=0.15.8",
+    "sentry-sdk>=2.56.0",
+    "sqlalchemy>=2.0.48",
+    "uvicorn>=0.42.0",
+]
