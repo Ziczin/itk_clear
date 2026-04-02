@@ -57,20 +57,25 @@ class OutboxPublisher:
                                 )
                                 await uow.outbox.mark_published(e.id)
                                 await uow.commit()
+
                                 logger.info(
                                     "Outbox event published",
                                     event_id=str(e.id),
                                     topic="order.events",
                                 )
+
                             except Exception as err:
                                 await uow.rollback()
+
                                 logger.error(
                                     "Publish failed, transaction rolled back",
                                     event_id=str(e.id),
                                     error=str(err),
                                 )
+
                 except Exception as err:
                     logger.error("Outbox polling loop critical failure", error=str(err))
+
                 await asyncio.sleep(self.interval)
 
 
@@ -97,16 +102,19 @@ class ShipmentConsumer:
                         uc = self.uc_factory()
                         await uc.execute(data)
                         await consumer.commit()
+
                         logger.info(
                             "Shipment message processed and committed",
                             partition=msg.partition,
                             offset=msg.offset,
                         )
+
                     except Exception as err:
                         logger.error(
                             "Message processing failed, committing to avoid poison pill",
                             error=str(err),
                         )
+                        
                         await consumer.commit()
             finally:
                 await consumer.stop()

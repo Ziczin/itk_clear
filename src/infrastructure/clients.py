@@ -21,11 +21,13 @@ class CatalogClient:
             async with self.session.get(url, headers=headers) as response:
                 if response.status != 200:
                     error_text = await response.text()
+                    
                     logger.error(
                         "Catalog request failed",
                         status=response.status,
                         error=error_text,
                     )
+
                     raise CatalogServiceError(f"Catalog error: {error_text}")
 
                 data = await response.json()
@@ -38,6 +40,7 @@ class CatalogClient:
                         requested=quantity,
                     )
                     raise CatalogServiceError("Insufficient stock")
+                
                 return data
 
 
@@ -60,20 +63,26 @@ class PaymentClient:
             }
 
             logger.debug("Requesting payment creation", order_id=order_id)
+
             async with self.session.post(
                 url, json=payload, headers=headers
             ) as response:
+                
                 if response.status not in (200, 201):
                     error_text = await response.text()
+
                     logger.error(
                         "Payment request failed",
                         status=response.status,
                         error=error_text,
                     )
+
                     raise PaymentServiceError(f"Payment error: {error_text}")
 
                 result = await response.json()
+
                 logger.info("Payment created", payment_id=result.get("id"))
+
                 return result
 
 
@@ -100,6 +109,7 @@ class NotificationClient:
                 async with self.session.post(
                     url, json=payload, headers=headers
                 ) as response:
+                    
                     if response.status not in (200, 201):
                         logger.error(
                             "Notification request failed", status=response.status
@@ -108,6 +118,7 @@ class NotificationClient:
                             f"Notification error: {await response.text()}"
                         )
                     logger.info("Notification sent", reference_id=reference_id)
+                    
             except Exception:
                 logger.exception(
                     "Notification sending failed", reference_id=reference_id
