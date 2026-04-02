@@ -305,7 +305,7 @@ class RequestBuilder:
             )
 
         if config.with_status_code:
-            return {"status": resp.status, "data": parsed}
+            return {"status_code": resp.status, "data": parsed}
 
         return parsed
 
