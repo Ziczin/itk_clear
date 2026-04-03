@@ -11,6 +11,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "dependency-injector>=4.49.0",
     "fastapi>=0.135.2",
+    "greenlet>=3.3.2",
     "loguru>=0.7.3",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
