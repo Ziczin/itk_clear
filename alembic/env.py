@@ -5,10 +5,11 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from alembic import context
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))# noqa
+# Добавляем корень проекта в sys.path, чтобы Python мог импортировать 'src'
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.config import settings
-from src.infrastructure.database import Base  # noqa
+from src.infrastructure.database import Base  # noqa: F401
 
 
 config = context.config
@@ -16,8 +17,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-alembic_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-config.set_main_option("sqlalchemy.url", alembic_url)
+# Используем синхронную версию URL для Alembic CLI (psycopg2 вместо asyncpg)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL_SYNC)
 
 target_metadata = Base.metadata
 
