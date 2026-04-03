@@ -3,51 +3,58 @@ from src.infrastructure.uow import UoW
 from src.infrastructure.clients.catalog import CatalogClient
 from src.infrastructure.clients.payment import PaymentClient
 from src.infrastructure.clients.notify import NotifyClient
-from src.application.usecases.create_order import CreateOrderUC
-from src.application.usecases.get_order import GetOrderUC
-from src.application.usecases.payment_callback import PaymentCallbackUC
+from src.application.usecases.create_order import CreateOrderUseCase
+from src.application.usecases.get_order import GetOrderUseCase
+from src.application.usecases.payment_callback import PaymentCallbackUseCase
 
 
-def get_uow():
-    """Provide transactional unit per HTTP request."""
+def provide_unit_of_work():
+    """Instantiate and return a new transactional unit of work."""
     return UoW()
 
 
-def get_http_session(request: Request):
-    """Inject shared aiohttp session from app state."""
+def provide_http_session(request: Request):
+    """Retrieve shared aiohttp client session from application state."""
     return request.app.state.http_session
 
 
-def get_catalog(session=Depends(get_http_session)):
-    """Initialize catalog client dependency."""
-    return CatalogClient(session)
+def provide_catalog_client(session=Depends(provide_http_session)):
+    """Construct catalog HTTP client with injected session."""
+    return CatalogClient(session=session)
 
 
-def get_payment(session=Depends(get_http_session)):
-    """Initialize payment client dependency."""
-    return PaymentClient(session)
+def provide_payment_client(session=Depends(provide_http_session)):
+    """Construct payment HTTP client with injected session."""
+    return PaymentClient(session=session)
 
 
-def get_notify(session=Depends(get_http_session)):
-    """Initialize notification client dependency."""
-    return NotifyClient(session)
+def provide_notification_client(session=Depends(provide_http_session)):
+    """Construct notification HTTP client with injected session."""
+    return NotifyClient(session=session)
 
 
-def get_create_uc(
-    uow=Depends(get_uow),
-    cat=Depends(get_catalog),
-    pay=Depends(get_payment),
-    notify=Depends(get_notify),
+def provide_create_order_use_case(
+    uow=Depends(provide_unit_of_work),
+    catalog=Depends(provide_catalog_client),
+    payment=Depends(provide_payment_client),
+    notify=Depends(provide_notification_client),
 ):
-    """Assemble create order use case with all dependencies."""
-    return CreateOrderUC(uow, cat, pay, notify)
+    """Assemble order creation use case with all required dependencies."""
+    return CreateOrderUseCase(
+        uow=uow,
+        catalog_client=catalog,
+        payment_client=payment,
+        notification_client=notify,
+    )
 
 
-def get_get_order_uc(uow=Depends(get_uow)):
-    """Assemble get order use case with dependencies."""
-    return GetOrderUC(uow)
+def provide_get_order_use_case(uow=Depends(provide_unit_of_work)):
+    """Assemble order retrieval use case with required dependencies."""
+    return GetOrderUseCase(uow=uow)
 
 
-def get_callback_uc(uow=Depends(get_uow), notify=Depends(get_notify)):
-    """Assemble payment callback use case with dependencies."""
-    return PaymentCallbackUC(uow, notify)
+def provide_payment_callback_use_case(
+    uow=Depends(provide_unit_of_work), notify=Depends(provide_notification_client)
+):
+    """Assemble payment callback processing use case with dependencies."""
+    return PaymentCallbackUseCase(uow=uow, notification_client=notify)

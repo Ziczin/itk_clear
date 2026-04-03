@@ -1,6 +1,6 @@
 from sqlalchemy import select, update
 from src.application.ports import IOrderRepository, IOutboxRepository, IInboxRepository
-from domain.models import Order, OutboxEntry, InboxEntry
+from domain.order import Order, OutboxEntry, InboxEntry
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from datetime import datetime

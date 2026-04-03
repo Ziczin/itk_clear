@@ -1,17 +1,17 @@
 from sqlalchemy import select, update
 from src.application.ports.outbox_repo import IOutboxRepo
-from src.infrastructure.orm_models import OutboxDB
+from src.infrastructure.models.outbox import OutboxDB
 from uuid import UUID
 
 
 class OutboxRepo(IOutboxRepo):
-    """SQLAlchemy implementation for outbox event persistence."""
+    """SQLAlchemy implementation for outbox event persistence operations."""
 
     def __init__(self):
         self.session = None
 
     async def add(self, entry):
-        """Queue new event for asynchronous publishing."""
+        """Queue a new event entry for asynchronous publishing."""
         db_entry = OutboxDB(
             id=entry.id,
             event_type=entry.event_type,
@@ -21,14 +21,14 @@ class OutboxRepo(IOutboxRepo):
         self.session.add(db_entry)
 
     async def get_pending(self, limit=10):
-        """Retrieve limited batch of unpublished events."""
-        res = await self.session.execute(
+        """Retrieve a limited batch of unpublished event entries."""
+        result = await self.session.execute(
             select(OutboxDB).where(OutboxDB.status == "PENDING").limit(limit)
         )
-        return res.scalars().all()
+        return result.scalars().all()
 
-    async def mark_published(self, eid: UUID):
-        """Update event status to successfully published."""
+    async def mark_as_published(self, entry_id: UUID):
+        """Update an event entry status to indicate successful delivery."""
         await self.session.execute(
-            update(OutboxDB).where(OutboxDB.id == eid).values(status="PUBLISHED")
+            update(OutboxDB).where(OutboxDB.id == entry_id).values(status="PUBLISHED")
         )

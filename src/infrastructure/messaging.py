@@ -1,39 +1,39 @@
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 import json
 import asyncio
-from src.core.config import settings
+from src.config import settings
 from src.utils.logger import logger
 
 
-class KafkaProducer:
-    """Wrapper around aiokafka for event publishing."""
+class KafkaProducerWrapper:
+    """Wrapper around aiokafka for reliable event publishing."""
 
     def __init__(self):
         self.producer = None
 
     async def start(self):
-        """Establish connection to Kafka broker cluster."""
+        """Establish connection to the Kafka broker cluster."""
         self.producer = AIOKafkaProducer(
             bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS
         )
         await self.producer.start()
 
     async def stop(self):
-        """Gracefully close Kafka producer connection."""
+        """Gracefully terminate the Kafka producer connection."""
         if self.producer:
             await self.producer.stop()
 
-    async def publish(self, topic: str, key: str, val: dict):
-        """Send event payload to specified topic with ordering key."""
+    async def publish(self, topic: str, key: str, value: dict):
+        """Send an event payload to a specified topic with an ordering key."""
         await self.producer.send_and_wait(
-            topic, key=key.encode(), value=json.dumps(val).encode()
+            topic, key=key.encode(), value=json.dumps(value).encode()
         )
 
 
 class OutboxPublisher:
     """Background worker polling outbox and publishing to Kafka."""
 
-    def __init__(self, uow_factory, broker: KafkaProducer, interval=5):
+    def __init__(self, uow_factory, broker: KafkaProducerWrapper, interval=5):
         self.uow_factory = uow_factory
         self.broker = broker
         self.interval = interval
@@ -44,37 +44,37 @@ class OutboxPublisher:
             while True:
                 try:
                     async with self.uow_factory() as uow:
-                        pending = await uow.outbox.get_pending()
-                        if not pending:
+                        pending_events = await uow.outbox.get_pending()
+                        if not pending_events:
                             await asyncio.sleep(self.interval)
                             continue
-                        for e in pending:
+
+                        for event in pending_events:
                             try:
                                 await self.broker.publish(
-                                    "student_system-order.events",
-                                    str(e.idempotency_key),
-                                    e.payload,
+                                    topic="student_system-order.events",
+                                    key=str(event.idempotency_key),
+                                    value=event.payload,
                                 )
-                                await uow.outbox.mark_published(e.id)
+                                await uow.outbox.mark_as_published(entry_id=event.id)
                                 await uow.commit()
-
                                 logger.info(
                                     "Outbox event published",
-                                    event_id=str(e.id),
+                                    event_id=str(event.id),
                                     topic="order.events",
                                 )
-
-                            except Exception as err:
+                            except Exception as error:
                                 await uow.rollback()
-
                                 logger.error(
                                     "Publish failed, transaction rolled back",
-                                    event_id=str(e.id),
-                                    error=str(err),
+                                    event_id=str(event.id),
+                                    error=str(error),
                                 )
 
-                except Exception as err:
-                    logger.error("Outbox polling loop critical failure", error=str(err))
+                except Exception as error:
+                    logger.error(
+                        "Outbox polling loop critical failure", error=str(error)
+                    )
 
                 await asyncio.sleep(self.interval)
 
@@ -95,26 +95,24 @@ class ShipmentConsumer:
                 group_id="order-svc-group",
             )
             await consumer.start()
+
             try:
-                async for msg in consumer:
+                async for message in consumer:
                     try:
-                        data = json.loads(msg.value)
-                        uc = self.uc_factory()
-                        await uc.execute(data)
+                        event_data = json.loads(message.value)
+                        use_case = self.uc_factory()
+                        await use_case.execute(event_data=event_data)
                         await consumer.commit()
-
                         logger.info(
-                            "Shipment message processed and committed",
-                            partition=msg.partition,
-                            offset=msg.offset,
+                            "Shipment message processed",
+                            partition=message.partition,
+                            offset=message.offset,
                         )
-
-                    except Exception as err:
+                    except Exception as error:
                         logger.error(
                             "Message processing failed, committing to avoid poison pill",
-                            error=str(err),
+                            error=str(error),
                         )
-                        
                         await consumer.commit()
             finally:
                 await consumer.stop()

@@ -1,58 +1,66 @@
-from src.domain.models import InboxEntry
+from src.domain.inbox import InboxEntry
 from src.application.ports.uow import IUoW
-from src.application.ports.order_repo import IOrderRepo
+from src.application.ports.order_repo import OrderNotFoundError
 from src.utils.logger import logger
 from uuid import UUID
 import asyncio
 
 
-class ShipmentEventUC:
-    """Use case for processing shipping service Kafka events."""
+class ShipmentEventUseCase:
+    """Application service for processing shipping service Kafka events."""
 
-    def __init__(self, uow: IUoW, notify):
-        """Initialize dependencies for shipment event handling."""
+    def __init__(self, uow: IUoW, notification_client):
+        """Inject transactional unit and notification dependencies."""
         self.uow = uow
-        self.notify = notify
+        self.notification_client = notification_client
 
-    async def execute(self, data: dict):
+    async def execute(self, event_data: dict):
         """Consume shipment event and update order state idempotently."""
-
         async with logger("UC.ShipmentEvent.execute"):
-            etype = data.get("event_type")
+            event_type = event_data.get("event_type")
+            order_id = UUID(event_data.get("order_id"))
+            idempotency_key = UUID(
+                event_data.get("idempotency_key", event_data.get("shipment_id"))
+            )
 
-            oid = UUID(data.get("order_id"))
-            key = UUID(data.get("idempotency_key", data.get("shipment_id")))
+            logger.info(
+                "Processing shipment event",
+                event_type=event_type,
+                order_id=str(order_id),
+            )
 
-            logger.info("Processing shipment event", type=etype, order_id=str(oid))
             async with self.uow as uow:
-
-                if await uow.inbox.exists(key):
-                    logger.warning("Duplicate event skipped", event_key=str(key))
+                if await uow.inbox.exists(idempotency_key=idempotency_key):
+                    logger.warning(
+                        "Duplicate event skipped", event_key=str(idempotency_key)
+                    )
                     return
-                
-                order = await uow.orders.get(oid)
 
-                if not order:
-                    raise IOrderRepo.NotFound("Order missing for shipment update")
-                
-                if etype == "order.shipped":
-                    order.mark_shipped()
-                    msg = "Ваш заказ отправлен в доставку"
+                order = await uow.orders.get(order_id=order_id)
+                if order is None:
+                    raise OrderNotFoundError()
 
-                elif etype == "order.cancelled":
-                    order.mark_cancelled()
-                    msg = f"Ваш заказ отменен. Причина: {data.get('reason', 'unknown')}"
-
+                if event_type == "order.shipped":
+                    order.transition_to_shipped()
+                    notification_message = "Ваш заказ отправлен в доставку"
+                elif event_type == "order.cancelled":
+                    order.transition_to_cancelled()
+                    notification_message = f"Ваш заказ отменен. Причина: {event_data.get('reason', 'unknown')}"
                 else:
-                    msg = "Unknown shipment event"
+                    notification_message = "Unknown shipment event"
 
-                await uow.inbox.add(InboxEntry(idempotency_key=key))
+                await uow.inbox.add(entry=InboxEntry(idempotency_key=idempotency_key))
                 await uow.commit()
 
                 logger.info(
                     "Shipment event processed and committed",
                     order_id=str(order.id),
-                    new_status=order.status.value,
+                    new_status=order.status,
                 )
-                
-                asyncio.create_task(self.notify.send(msg, str(order.id), str(key)))
+                asyncio.create_task(
+                    self.notification_client.send(
+                        message=notification_message,
+                        reference_id=str(order.id),
+                        idempotency_key=str(idempotency_key),
+                    )
+                )

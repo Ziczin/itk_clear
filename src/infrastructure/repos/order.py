@@ -1,18 +1,18 @@
 from sqlalchemy import select, update
 from src.application.ports.order_repo import IOrderRepo
-from src.infrastructure.orm_models import OrderDB
-from src.domain.models import Order
+from src.infrastructure.models.order import OrderDB
+from src.domain.order import Order
 from uuid import UUID
 
 
 class OrderRepo(IOrderRepo):
-    """SQLAlchemy implementation of order repository interface."""
+    """SQLAlchemy implementation of the order repository interface."""
 
     def __init__(self):
         self.session = None
 
-    async def add(self, order, key: UUID):
-        """Insert new order entity into database session."""
+    async def add(self, order, idempotency_key: UUID):
+        """Stage a new order entity for insertion into the database."""
         db_order = OrderDB(
             id=order.id,
             user_id=order.user_id,
@@ -20,41 +20,41 @@ class OrderRepo(IOrderRepo):
             quantity=order.quantity,
             status=order.status.value,
             payment_id=order.payment_id,
-            idempotency_key=key,
+            idempotency_key=idempotency_key,
         )
         self.session.add(db_order)
 
-    async def get(self, oid: UUID) -> object:
-        """Fetch order by primary key identifier."""
-        res = await self.session.get(OrderDB, oid)
-        return self._to_domain(res) if res else None
+    async def get(self, order_id: UUID):
+        """Fetch an order entity by its primary key identifier."""
+        result = await self.session.get(OrderDB, order_id)
+        return self._map_to_domain(result) if result else None
 
     async def update(self, order):
-        """Apply status and timestamp updates to existing record."""
-        stmt = (
+        """Apply status and timestamp updates to an existing database record."""
+        statement = (
             update(OrderDB)
             .where(OrderDB.id == order.id)
             .values(status=order.status.value, updated_at=order.updated_at)
         )
-        await self.session.execute(stmt)
+        await self.session.execute(statement)
 
-    async def get_by_key(self, key: UUID) -> object:
-        """Retrieve order using idempotency key constraint."""
-        res = await self.session.execute(
-            select(OrderDB).where(OrderDB.idempotency_key == key)
+    async def get_by_idempotency_key(self, idempotency_key: UUID):
+        """Retrieve an order using its unique idempotency constraint key."""
+        result = await self.session.execute(
+            select(OrderDB).where(OrderDB.idempotency_key == idempotency_key)
         )
-        db = res.scalar_one_or_none()
-        return self._to_domain(db) if db else None
+        db_order = result.scalar_one_or_none()
+        return self._map_to_domain(db_order) if db_order else None
 
-    def _to_domain(self, db):
-        """Convert SQLAlchemy model to domain entity."""
+    def _map_to_domain(self, db_model):
+        """Convert a SQLAlchemy ORM model to a domain order entity."""
         return Order(
-            id=db.id,
-            user_id=db.user_id,
-            item_id=db.item_id,
-            quantity=db.quantity,
-            status=db.status,
-            payment_id=db.payment_id,
-            created_at=db.created_at,
-            updated_at=db.updated_at,
+            id=db_model.id,
+            user_id=db_model.user_id,
+            item_id=db_model.item_id,
+            quantity=db_model.quantity,
+            status=db_model.status,
+            payment_id=db_model.payment_id,
+            created_at=db_model.created_at,
+            updated_at=db_model.updated_at,
         )

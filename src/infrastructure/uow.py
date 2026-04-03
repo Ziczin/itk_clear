@@ -7,7 +7,7 @@ from src.utils.logger import logger
 
 
 class UoW(IUoW):
-    """Concrete unit of work managing transactional session lifecycle."""
+    """Concrete implementation managing transactional session lifecycle."""
 
     def __init__(self):
         self.session = None
@@ -16,7 +16,7 @@ class UoW(IUoW):
         self._inbox = InboxRepo()
 
     async def __aenter__(self):
-        """Open database session and attach to repositories."""
+        """Open database session and bind repositories to it."""
         self.session = async_session_maker()
         self._orders.session = self.session
         self._outbox.session = self.session
@@ -25,28 +25,31 @@ class UoW(IUoW):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Close session on context exit."""
+        """Close database session upon context exit."""
         await self.session.close()
         logger.debug("UoW session closed")
 
     async def commit(self):
-        """Persist all pending changes to database."""
+        """Persist all staged changes to the database."""
         await self.session.commit()
         logger.info("UoW transaction committed")
 
     async def rollback(self):
-        """Revert all pending changes in session."""
+        """Revert all staged changes in the current session."""
         await self.session.rollback()
         logger.warning("UoW transaction rolled back")
 
     @property
     def orders(self):
+        """Expose the order repository instance."""
         return self._orders
 
     @property
     def outbox(self):
+        """Expose the outbox repository instance."""
         return self._outbox
 
     @property
     def inbox(self):
+        """Expose the inbox repository instance."""
         return self._inbox

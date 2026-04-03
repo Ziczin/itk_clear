@@ -1,17 +1,18 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-from src.core.config import settings
+from src.config import settings
+
 
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
-"""Create async engine with configured database URL."""
+"""Create asynchronous database engine using configured connection string."""
 
 async_session_maker = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
-"""Factory for async database sessions."""
+"""Factory function producing new asynchronous database sessions."""
 
 
 class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy declarative models."""
+    """Base declarative class for all SQLAlchemy ORM models."""
 
     pass

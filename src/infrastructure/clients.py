@@ -21,7 +21,7 @@ class CatalogClient:
             async with self.session.get(url, headers=headers) as response:
                 if response.status != 200:
                     error_text = await response.text()
-                    
+
                     logger.error(
                         "Catalog request failed",
                         status=response.status,
@@ -40,7 +40,7 @@ class CatalogClient:
                         requested=quantity,
                     )
                     raise CatalogServiceError("Insufficient stock")
-                
+
                 return data
 
 
@@ -67,7 +67,6 @@ class PaymentClient:
             async with self.session.post(
                 url, json=payload, headers=headers
             ) as response:
-                
                 if response.status not in (200, 201):
                     error_text = await response.text()
 
@@ -109,7 +108,6 @@ class NotificationClient:
                 async with self.session.post(
                     url, json=payload, headers=headers
                 ) as response:
-                    
                     if response.status not in (200, 201):
                         logger.error(
                             "Notification request failed", status=response.status
@@ -118,7 +116,7 @@ class NotificationClient:
                             f"Notification error: {await response.text()}"
                         )
                     logger.info("Notification sent", reference_id=reference_id)
-                    
+
             except Exception:
                 logger.exception(
                     "Notification sending failed", reference_id=reference_id

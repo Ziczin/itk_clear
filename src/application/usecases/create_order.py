@@ -1,43 +1,52 @@
-from src.domain.models import Order
+from src.domain.order import Order
 from src.application.ports.uow import IUoW
-from src.application.ports.order_repo import IOrderRepo
+from src.application.ports.order_repo import OrderDuplicateError
 from src.utils.logger import logger
 from uuid import UUID
 import asyncio
 
 
-class CreateOrderUC:
-    """Use case for order creation with external validation and payment init."""
+class CreateOrderUseCase:
+    """Application service orchestrating order creation with validation."""
 
-    def __init__(self, uow: IUoW, catalog, payment, notify):
-        """Initialize dependencies for order creation flow."""
+    def __init__(self, uow: IUoW, catalog_client, payment_client, notification_client):
+        """Inject required infrastructure and domain dependencies."""
         self.uow = uow
-        self.catalog = catalog
-        self.payment = payment
-        self.notify = notify
+        self.catalog_client = catalog_client
+        self.payment_client = payment_client
+        self.notification_client = notification_client
 
-    async def execute(self, uid: str, iid: UUID, qty: int, key: UUID):
-        """Execute order creation sequence with stock check and payment setup."""
-
+    async def execute(
+        self, user_id: str, item_id: UUID, quantity: int, idempotency_key: UUID
+    ):
+        """Execute the complete order creation workflow."""
         async with logger("UC.CreateOrder.execute"):
-            logger.info("Initiating order creation flow", user_id=uid, item_id=str(iid))
+            logger.info(
+                "Initiating order creation flow", user_id=user_id, item_id=str(item_id)
+            )
 
             async with self.uow as uow:
-                existing = await uow.orders.get_by_key(key)
-
-                if existing:
+                existing_order = await uow.orders.get_by_idempotency_key(
+                    idempotency_key
+                )
+                if existing_order:
                     logger.warning(
-                        "Duplicate request detected", existing_id=str(existing.id)
+                        "Duplicate request detected", order_id=str(existing_order.id)
                     )
-                    raise IOrderRepo.Duplicate("Idempotency key already used")
-                
-                await self.catalog.check_stock(str(iid), qty)
+                    raise OrderDuplicateError()
 
-                pay_res = await self.payment.create(str(iid), "100.00", str(key))
-                order = Order(user_id=uid, item_id=iid, quantity=qty)
-                order.set_payment(pay_res["id"])
+                await self.catalog_client.check_stock(
+                    item_id=item_id, quantity=quantity
+                )
 
-                await uow.orders.add(order, key)
+                payment_result = await self.payment_client.create(
+                    order_id=item_id, amount="100.00", idempotency_key=idempotency_key
+                )
+
+                order = Order(user_id=user_id, item_id=item_id, quantity=quantity)
+                order.bind_payment_id(payment_id=payment_result["id"])
+
+                await uow.orders.add(order=order, idempotency_key=idempotency_key)
                 await uow.commit()
 
                 logger.info(
@@ -45,9 +54,12 @@ class CreateOrderUC:
                     order_id=str(order.id),
                     payment_id=str(order.payment_id),
                 )
-
                 asyncio.create_task(
-                    self.notify.send("Ваш заказ создан", str(order.id), str(key))
+                    self.notification_client.send(
+                        message="Ваш заказ создан",
+                        reference_id=str(order.id),
+                        idempotency_key=str(idempotency_key),
+                    )
                 )
 
                 return order

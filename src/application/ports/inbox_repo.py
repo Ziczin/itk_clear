@@ -1,17 +1,24 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from src.utils.exceptions import BaseAppError
+
+
+class InboxCheckError(BaseAppError):
+    """Raised when verifying inbox status encounters an error."""
+
+    default_message = "Failed to verify inbox processing status"
+
 
 class IInboxRepo(ABC):
-    """Interface for processed events idempotency tracking."""
-
-    class CheckError(Exception):
-        """Failed to verify processing status."""
+    """Abstract interface for idempotency tracking of processed events."""
 
     @abstractmethod
     async def add(self, entry):
+        """Store a processed event key to prevent duplicate handling."""
         pass
 
     @abstractmethod
-    async def exists(self, key: UUID) -> bool:
+    async def exists(self, idempotency_key: UUID) -> bool:
+        """Check whether an event key has already been processed."""
         pass
