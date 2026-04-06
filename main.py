@@ -19,7 +19,7 @@ async def health():
     return {"status": "ok"}
 
 
-# aaa
+#
 if __name__ == "__main__":
     """Start the application with hot-reload enabled for development."""
     print("Starting Order Service in development mode with reload=True.")
