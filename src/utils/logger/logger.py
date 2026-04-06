@@ -24,12 +24,23 @@ class ContextLogger:
         self.logger = logging.getLogger("context_logger")
         self.logger.setLevel(getattr(logging, level.upper()))
         self.logger.handlers.clear()
+        self.logger.propagate = False
 
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setLevel(self.logger.level)
+
         self.formatter = Formatter(
             project_root=PROJECT_ROOT, console_output=console_output
         )
         console_handler.setFormatter(self.formatter)
+
+        def flushed_emit(record):
+            original_emit(record)
+            console_handler.flush()
+
+        original_emit = console_handler.emit
+        console_handler.emit = flushed_emit
+
         self.logger.addHandler(console_handler)
 
         self._context: LogContext | None = None
