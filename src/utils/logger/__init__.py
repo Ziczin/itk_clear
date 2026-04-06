@@ -17,7 +17,9 @@ def json_sink(message):
     try:
         abs_path = os.path.abspath(record["file"].path)
         rel_path = os.path.relpath(abs_path, project_root)
-        place_str = f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
+        place_str = (
+            f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
+        )
     except (ValueError, KeyError):
         place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"
 
@@ -39,7 +41,9 @@ def json_sink(message):
     if record.get("exception"):
         log_entry["data"]["extra"]["exception"] = record["exception"]
 
-    sys.stderr.write(json.dumps(log_entry, ensure_ascii=False, indent=2, default=str) + "\n")
+    sys.stderr.write(
+        json.dumps(log_entry, ensure_ascii=False, indent=2, default=str) + "\n"
+    )
 
 
 # Configure loguru with JSON sink
