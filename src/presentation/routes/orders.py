@@ -6,7 +6,7 @@ from src.application.usecases.get_order import GetOrderUseCase
 from src.application.ports.order_repo import OrderNotFoundError, OrderDuplicateError
 from src.infrastructure.clients.catalog import CatalogServiceError
 from src.infrastructure.clients.payment import PaymentServiceError
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 from src.presentation.dependencies import (
     provide_create_order_use_case,
     provide_get_order_use_case,

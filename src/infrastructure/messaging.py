@@ -2,7 +2,7 @@ from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 import json
 import asyncio
 from src.config import settings
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 
 
 class KafkaProducerWrapper:
@@ -40,43 +40,41 @@ class OutboxPublisher:
 
     async def run(self):
         """Continuously process pending outbox events."""
-        async with logger("Worker.OutboxPublisher"):
-            while True:
-                try:
-                    async with self.uow_factory() as uow:
-                        pending_events = await uow.outbox.get_pending()
-                        if not pending_events:
-                            await asyncio.sleep(self.interval)
-                            continue
+        logger.info("Worker.OutboxPublisher started")
+        while True:
+            try:
+                async with self.uow_factory() as uow:
+                    pending_events = await uow.outbox.get_pending()
+                    if not pending_events:
+                        await asyncio.sleep(self.interval)
+                        continue
 
-                        for event in pending_events:
-                            try:
-                                await self.broker.publish(
-                                    topic="student_system-order.events",
-                                    key=str(event.idempotency_key),
-                                    value=event.payload,
-                                )
-                                await uow.outbox.mark_as_published(entry_id=event.id)
-                                await uow.commit()
-                                logger.info(
-                                    "Outbox event published",
-                                    event_id=str(event.id),
-                                    topic="order.events",
-                                )
-                            except Exception as error:
-                                await uow.rollback()
-                                logger.error(
-                                    "Publish failed, transaction rolled back",
-                                    event_id=str(event.id),
-                                    error=str(error),
-                                )
+                    for event in pending_events:
+                        try:
+                            await self.broker.publish(
+                                topic="student_system-order.events",
+                                key=str(event.idempotency_key),
+                                value=event.payload,
+                            )
+                            await uow.outbox.mark_as_published(entry_id=event.id)
+                            await uow.commit()
+                            logger.info(
+                                "Outbox event published",
+                                event_id=str(event.id),
+                                topic="order.events",
+                            )
+                        except Exception as error:
+                            await uow.rollback()
+                            logger.error(
+                                "Publish failed, transaction rolled back",
+                                event_id=str(event.id),
+                                error=str(error),
+                            )
 
-                except Exception as error:
-                    logger.error(
-                        "Outbox polling loop critical failure", error=str(error)
-                    )
+            except Exception as error:
+                logger.error("Outbox polling loop critical failure", error=str(error))
 
-                await asyncio.sleep(self.interval)
+            await asyncio.sleep(self.interval)
 
 
 class ShipmentConsumer:
@@ -88,32 +86,32 @@ class ShipmentConsumer:
 
     async def run(self, cancel_event: asyncio.Event):
         """Continuously read shipment messages and delegate to use case."""
-        async with logger("Worker.ShipmentConsumer"):
-            consumer = AIOKafkaConsumer(
-                "student_system-shipment.events",
-                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-                group_id="order-svc-group",
-            )
-            await consumer.start()
+        logger.info("Worker.ShipmentConsumer started")
+        consumer = AIOKafkaConsumer(
+            "student_system-shipment.events",
+            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+            group_id="order-svc-group",
+        )
+        await consumer.start()
 
-            try:
-                async for message in consumer:
-                    try:
-                        event_data = json.loads(message.value)
-                        use_case = self.uc_factory()
-                        await use_case.execute(event_data=event_data)
-                        await consumer.commit()
-                        logger.info(
-                            "Shipment message processed",
-                            partition=message.partition,
-                            offset=message.offset,
-                        )
-                    except Exception as error:
-                        logger.error(
-                            "Message processing failed, committing to avoid poison pill",
-                            error=str(error),
-                        )
-                        await consumer.commit()
-            finally:
-                await consumer.stop()
-                cancel_event.set()
+        try:
+            async for message in consumer:
+                try:
+                    event_data = json.loads(message.value)
+                    use_case = self.uc_factory()
+                    await use_case.execute(event_data=event_data)
+                    await consumer.commit()
+                    logger.info(
+                        "Shipment message processed",
+                        partition=message.partition,
+                        offset=message.offset,
+                    )
+                except Exception as error:
+                    logger.error(
+                        "Message processing failed, committing to avoid poison pill",
+                        error=str(error),
+                    )
+                    await consumer.commit()
+        finally:
+            await consumer.stop()
+            cancel_event.set()

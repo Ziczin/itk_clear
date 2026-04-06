@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from src.presentation.schemas.callback import PaymentCallbackRequest
 from src.application.usecases.payment_callback import PaymentCallbackUseCase
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 from src.presentation.dependencies import provide_payment_callback_use_case
 
 router = APIRouter(prefix="/api/orders", tags=["payments"])
@@ -28,9 +28,7 @@ async def payment_callback(
             idempotency_key=callback.idempotency_key,
         )
 
-        logger.info(
-            "Callback processed successfully", order_id=str(callback.order_id)
-        )
+        logger.info("Callback processed successfully", order_id=str(callback.order_id))
 
         return {"status": "ok"}
 

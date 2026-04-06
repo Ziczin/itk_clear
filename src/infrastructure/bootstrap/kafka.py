@@ -1,5 +1,5 @@
 from src.infrastructure.messaging import KafkaProducerWrapper
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 
 
 async def initialize_kafka_producer():

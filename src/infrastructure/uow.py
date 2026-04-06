@@ -3,7 +3,7 @@ from src.infrastructure.database import async_session_maker
 from src.infrastructure.repos.order import OrderRepo
 from src.infrastructure.repos.outbox import OutboxRepo
 from src.infrastructure.repos.inbox import InboxRepo
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 
 
 class UoW(IUoW):
