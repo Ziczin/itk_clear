@@ -5,13 +5,14 @@ from src.infrastructure.bootstrap.database import apply_migrations
 from src.infrastructure.bootstrap.kafka import initialize_kafka_producer
 from src.infrastructure.bootstrap.background import start_background_workers
 from src.infrastructure.bootstrap.monitoring import initialize_sentry_monitoring
-from src.utils.logger import logger
+from src.utils.logger import logger, set_request_id, clear_request_id
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Coordinate application startup sequence and graceful shutdown procedures."""
-    async with logger("Lifespan"):
+    request_id = set_request_id("lifespan-context")
+    try:
         logger.info("Initializing application components")
 
         try:
@@ -43,3 +44,5 @@ async def lifespan(application: FastAPI):
                 "Critical initialization failure detected", error=str(exception)
             )
             raise
+    finally:
+        clear_request_id()
