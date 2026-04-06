@@ -23,30 +23,33 @@ class ContextLogger:
 
         self.logger = logging.getLogger("context_logger")
         self.logger.setLevel(getattr(logging, level.upper()))
-        self.logger.handlers.clear()
         self.logger.propagate = False
-
-        console_handler = logging.StreamHandler(sys.stderr)
-        console_handler.setLevel(self.logger.level)
-
+        self._console_output = console_output
         self.formatter = Formatter(
             project_root=PROJECT_ROOT, console_output=console_output
         )
+        self._context: LogContext | None = None
+        self._sentry_handler: bool | None = None
+        self._next_context_name: str | None = None
+        self._setup_handler()
+
+    def _setup_handler(self):
+        self.logger.handlers.clear()
+        console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setLevel(self.logger.level)
         console_handler.setFormatter(self.formatter)
+        original_emit = console_handler.emit
 
         def flushed_emit(record):
             original_emit(record)
             console_handler.flush()
 
-        original_emit = console_handler.emit
         console_handler.emit = flushed_emit
-
         self.logger.addHandler(console_handler)
 
-        self._context: LogContext | None = None
-        self._sentry_handler: bool | None = None
-        self._next_context_name: str | None = None
-        self._console_output = console_output
+    def _ensure_handler(self):
+        if not self.logger.handlers:
+            self._setup_handler()
 
     def __call__(self, name: str):
         self._next_context_name = name
@@ -69,6 +72,7 @@ class ContextLogger:
             raise ImportError("Установите sentry-sdk: pip install sentry-sdk")
 
     def _log(self, level: str, message: str, **kwargs):
+        self._ensure_handler()
         exc_info = kwargs.pop("exc_info", None)
         stack_info = kwargs.pop("stack_info", None)
         extra = kwargs.pop("extra", {})
