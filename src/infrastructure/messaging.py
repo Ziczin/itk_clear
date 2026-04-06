@@ -2,7 +2,7 @@ from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 import json
 import asyncio
 from src.config import settings
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 
 
 class KafkaProducerWrapper:
