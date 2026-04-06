@@ -1,6 +1,6 @@
 import aiohttp
 from src.config import settings
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 
 
 class CatalogServiceError(Exception):

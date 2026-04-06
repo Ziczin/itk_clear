@@ -1,6 +1,6 @@
 from src.domain.order import Order
 from src.application.ports.uow import IUoW
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 from src.infrastructure.clients.catalog import CatalogServiceError
 from src.infrastructure.clients.payment import PaymentServiceError
 from uuid import UUID
@@ -29,9 +29,7 @@ class CreateOrderUseCase:
         )
 
         async with self.uow as uow:
-            existing_order = await uow.orders.get_by_idempotency_key(
-                idempotency_key
-            )
+            existing_order = await uow.orders.get_by_idempotency_key(idempotency_key)
 
             if existing_order:
                 logger.warning(

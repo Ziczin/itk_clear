@@ -1,6 +1,6 @@
 from src.application.ports.uow import IUoW
 from src.application.ports.order_repo import OrderNotFoundError
-from src.utils.context_vars import logger
+from src.utils.logger import logger
 from uuid import UUID
 
 
