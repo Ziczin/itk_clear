@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 
 from src.presentation.lifespan import lifespan
-from src.presentation.routes.orders import order_router
+from src.presentation.routes.orders import router
 
 
 app = FastAPI(
@@ -11,7 +11,7 @@ app = FastAPI(
     description="Event-driven order management service with clean architecture",
 )
 
-app.include_router(order_router)
+app.include_router(router)
 
 
 @app.get("/health")
