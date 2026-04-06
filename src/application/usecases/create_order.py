@@ -1,7 +1,8 @@
 from src.domain.order import Order
 from src.application.ports.uow import IUoW
-from src.application.ports.order_repo import OrderDuplicateError
 from src.utils.logger import logger
+from src.infrastructure.clients.catalog import CatalogServiceError
+from src.infrastructure.clients.payment import PaymentServiceError
 from uuid import UUID
 import asyncio
 
@@ -22,29 +23,46 @@ class CreateOrderUseCase:
         """Execute the complete order creation workflow."""
         async with logger("UC.CreateOrder.execute"):
             logger.info(
-                "Initiating order creation flow", user_id=user_id, item_id=str(item_id)
+                "Initiating order creation flow",
+                user_id=user_id,
+                item_id=str(item_id),
+                quantity=quantity,
             )
 
             async with self.uow as uow:
                 existing_order = await uow.orders.get_by_idempotency_key(
                     idempotency_key
                 )
+
                 if existing_order:
                     logger.warning(
-                        "Duplicate request detected", order_id=str(existing_order.id)
+                        "Duplicate request detected",
+                        order_id=str(existing_order.id),
+                        idempotency_key=str(idempotency_key),
                     )
-                    raise OrderDuplicateError()
+                    return existing_order
 
-                await self.catalog_client.check_stock(
-                    item_id=item_id, quantity=quantity
-                )
+                try:
+                    await self.catalog_client.check_stock(
+                        item_id=str(item_id), quantity=quantity
+                    )
+                except CatalogServiceError as e:
+                    logger.error("Catalog check failed", error=str(e))
+                    raise
 
-                payment_result = await self.payment_client.create(
-                    order_id=item_id, amount="100.00", idempotency_key=idempotency_key
-                )
+                try:
+                    payment_result = await self.payment_client.create(
+                        order_id=str(item_id),
+                        amount="100.00",
+                        idempotency_key=str(idempotency_key),
+                    )
+                    payment_id = UUID(payment_result["id"])
+                except PaymentServiceError as e:
+                    logger.error("Payment creation failed", error=str(e))
+                    raise
 
                 order = Order(user_id=user_id, item_id=item_id, quantity=quantity)
-                order.bind_payment_id(payment_id=payment_result["id"])
+                order.bind_payment_id(payment_id=payment_id)
 
                 await uow.orders.add(order=order, idempotency_key=idempotency_key)
                 await uow.commit()
@@ -54,12 +72,30 @@ class CreateOrderUseCase:
                     order_id=str(order.id),
                     payment_id=str(order.payment_id),
                 )
+
                 asyncio.create_task(
-                    self.notification_client.send(
-                        message="Ваш заказ создан",
+                    self._send_notification_safe(
+                        message="Ваш заказ создан и ожидает оплаты",
                         reference_id=str(order.id),
                         idempotency_key=str(idempotency_key),
                     )
                 )
 
                 return order
+
+    async def _send_notification_safe(
+        self, message: str, reference_id: str, idempotency_key: str
+    ):
+        """Send notification without blocking the main flow."""
+        try:
+            await self.notification_client.send(
+                message=message,
+                reference_id=reference_id,
+                idempotency_key=idempotency_key,
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to send notification (non-blocking)",
+                error=str(e),
+                reference_id=reference_id,
+            )

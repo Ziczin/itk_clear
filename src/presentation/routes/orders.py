@@ -1,19 +1,33 @@
-from fastapi import APIRouter, Depends, HTTPException
-from src.presentation.schemas import CreateOrderRequest, OrderResponse
-from src.application.usecases import CreateOrderUseCase
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status
+from src.presentation.schemas.order import CreateOrderRequest, OrderResponse
+from src.application.usecases.create_order import CreateOrderUseCase
+from src.application.usecases.get_order import GetOrderUseCase
+from src.application.ports.order_repo import OrderNotFoundError, OrderDuplicateError
+from src.infrastructure.clients.catalog import CatalogServiceError
+from src.infrastructure.clients.payment import PaymentServiceError
 from src.utils.logger import logger
-from src.presentation.dependencies import get_create_order_use_case
+from src.presentation.dependencies import (
+    provide_create_order_use_case,
+    provide_get_order_use_case,
+)
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
 
-@router.post("", status_code=201, response_model=OrderResponse)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=OrderResponse)
 async def create_order(
     request: CreateOrderRequest,
-    use_case: CreateOrderUseCase = Depends(get_create_order_use_case),
+    use_case: CreateOrderUseCase = Depends(provide_create_order_use_case),
 ):
+    """Handle order creation requests."""
     async with logger("Routes.CreateOrder"):
-        logger.info("Handling CreateOrder request", user_id=request.user_id)
+        logger.info(
+            "Handling CreateOrder request",
+            user_id=request.user_id,
+            item_id=str(request.item_id),
+        )
+
         try:
             order = await use_case.execute(
                 user_id=request.user_id,
@@ -29,10 +43,84 @@ async def create_order(
                 user_id=order.user_id,
                 item_id=order.item_id,
                 quantity=order.quantity,
-                status=order.status,
+                status=order.status.value,
                 created_at=order.created_at.isoformat(),
                 updated_at=order.updated_at.isoformat(),
             )
-        except Exception as e:
-            logger.exception("Order creation failed")
-            raise HTTPException(status_code=400, detail=str(e))
+
+        except OrderDuplicateError:
+            logger.warning(
+                "Duplicate order request", idempotency_key=str(request.idempotency_key)
+            )
+
+            existing = await use_case.uow.orders.get_by_idempotency_key(
+                request.idempotency_key
+            )
+
+            if existing:
+                return OrderResponse(
+                    id=existing.id,
+                    user_id=existing.user_id,
+                    item_id=existing.item_id,
+                    quantity=existing.quantity,
+                    status=existing.status.value,
+                    created_at=existing.created_at.isoformat(),
+                    updated_at=existing.updated_at.isoformat(),
+                )
+
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Idempotency key already used",
+            )
+
+        except (CatalogServiceError, PaymentServiceError) as e:
+            logger.error("External service error", error=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+        except OrderNotFoundError as e:
+            logger.error("Order not found", error=str(e))
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+        except Exception:
+            logger.exception("Order creation failed unexpectedly")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+
+@router.get("/{order_id}", response_model=OrderResponse)
+async def get_order(
+    order_id: UUID, use_case: GetOrderUseCase = Depends(provide_get_order_use_case)
+):
+    """Retrieve order details by unique identifier."""
+    async with logger("Routes.GetOrder"):
+        logger.info("Fetching order details", order_id=str(order_id))
+
+        try:
+            order = await use_case.execute(order_id=order_id)
+
+            logger.info("Order retrieved successfully", status=order.status)
+
+            return OrderResponse(
+                id=order.id,
+                user_id=order.user_id,
+                item_id=order.item_id,
+                quantity=order.quantity,
+                status=order.status.value,
+                created_at=order.created_at.isoformat(),
+                updated_at=order.updated_at.isoformat(),
+            )
+
+        except OrderNotFoundError:
+            logger.warning("Order not found", order_id=str(order_id))
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
+            )
+
+        except Exception:
+            logger.exception("Order retrieval failed")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )

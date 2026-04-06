@@ -6,17 +6,12 @@ from typing import Optional
 class Config(BaseSettings):
     """Global settings container loaded from environment variables."""
 
-    # Database connection parameters (individual fields)
     POSTGRES_HOST: str
     POSTGRES_PORT: int
     POSTGRES_DATABASE_NAME: str
     POSTGRES_USERNAME: str
     POSTGRES_PASSWORD: str
-
-    # Computed DATABASE_URL for SQLAlchemy (asyncpg for app, psycopg2 for alembic)
     DATABASE_URL: Optional[str] = None
-
-    # Other services
     KAFKA_BOOTSTRAP_SERVERS: str
     CAPASHINO_API_KEY: str
     CATALOG_URL: HttpUrl
@@ -33,7 +28,6 @@ class Config(BaseSettings):
         """Build DATABASE_URL from individual PostgreSQL parameters if not provided."""
         if v:
             return v
-
         data = info.data
         return (
             f"postgresql+asyncpg://"
@@ -44,9 +38,15 @@ class Config(BaseSettings):
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
-        """Return sync version of DATABASE_URL for Alembic CLI (psycopg2 driver)."""
-        return self.DATABASE_URL.replace(
-            "postgresql+asyncpg://", "postgresql+psycopg2://"
+        """Return sync version of DATABASE_URL for Alembic CLI."""
+        url = self.DATABASE_URL
+        if url and "postgresql+asyncpg://" in url:
+            return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        return (
+            f"postgresql+psycopg2://"
+            f"{self.POSTGRES_USERNAME}:{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/"
+            f"{self.POSTGRES_DATABASE_NAME}"
         )
 
 
