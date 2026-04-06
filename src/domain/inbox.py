@@ -7,4 +7,4 @@ class InboxEntry:
     """Idempotency tracking record for processing incoming external events."""
 
     id: UUID = field(default_factory=uuid4)
-    idempotency_key: UUID = None
+    idempotency_key: str = None

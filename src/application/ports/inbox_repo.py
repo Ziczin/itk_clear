@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from uuid import UUID
 
 from src.utils.exceptions import BaseAppError
 
@@ -19,6 +18,6 @@ class IInboxRepo(ABC):
         pass
 
     @abstractmethod
-    async def exists(self, idempotency_key: UUID) -> bool:
+    async def exists(self, idempotency_key: str) -> bool:
         """Check whether an event key has already been processed."""
         pass

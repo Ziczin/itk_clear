@@ -18,7 +18,7 @@ class CreateOrderUseCase:
         self.notification_client = notification_client
 
     async def execute(
-        self, user_id: str, item_id: UUID, quantity: int, idempotency_key: UUID
+        self, user_id: str, item_id: UUID, quantity: int, idempotency_key: str
     ):
         """Execute the complete order creation workflow."""
         async with logger("UC.CreateOrder.execute"):

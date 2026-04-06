@@ -19,7 +19,7 @@ class PaymentCallbackUseCase:
         order_id: UUID,
         payment_status: str,
         payment_id: UUID,
-        idempotency_key: UUID,
+        idempotency_key: str,
     ):
         """Process payment result and transition order state accordingly."""
         async with logger("UC.PaymentCallback.execute"):

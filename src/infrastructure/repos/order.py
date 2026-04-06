@@ -11,7 +11,7 @@ class OrderRepo(IOrderRepo):
     def __init__(self):
         self.session = None
 
-    async def add(self, order, idempotency_key: UUID):
+    async def add(self, order, idempotency_key: str):
         """Stage a new order entity for insertion into the database."""
         db_order = OrderDB(
             id=order.id,
@@ -38,7 +38,7 @@ class OrderRepo(IOrderRepo):
         )
         await self.session.execute(statement)
 
-    async def get_by_idempotency_key(self, idempotency_key: UUID):
+    async def get_by_idempotency_key(self, idempotency_key: str):
         """Retrieve an order using its unique idempotency constraint key."""
         result = await self.session.execute(
             select(OrderDB).where(OrderDB.idempotency_key == idempotency_key)

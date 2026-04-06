@@ -9,7 +9,7 @@ class OutboxEntry:
     id: UUID = field(default_factory=uuid4)
     event_type: str = ""
     payload: dict = None
-    idempotency_key: UUID = None
+    idempotency_key: str = None
     status: str = "PENDING"
 
     def mark_as_published(self):

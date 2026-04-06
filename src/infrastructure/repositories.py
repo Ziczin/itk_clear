@@ -48,7 +48,7 @@ class SQLAlchemyOrderRepository(IOrderRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add(self, order: Order, idempotency_key: UUID):
+    async def add(self, order: Order, idempotency_key: str):
         logger.debug("Repo.AddingOrder", order_id=str(order.id))
         db_order = OrderDB(
             id=order.id,
@@ -129,7 +129,7 @@ class SQLAlchemyInboxRepository(IInboxRepository):
         db_entry = InboxDB(id=entry.id, idempotency_key=entry.idempotency_key)
         self.session.add(db_entry)
 
-    async def exists(self, idempotency_key: UUID) -> bool:
+    async def exists(self, idempotency_key: str) -> bool:
         result = await self.session.execute(
             select(InboxDB).where(InboxDB.idempotency_key == idempotency_key)
         )

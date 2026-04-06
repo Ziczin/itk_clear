@@ -11,4 +11,4 @@ class PaymentCallbackRequest(BaseModel):
     status: str
     amount: str
     error_message: Optional[str] = None
-    idempotency_key: UUID
+    idempotency_key: str
