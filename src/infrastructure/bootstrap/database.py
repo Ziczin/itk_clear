@@ -2,7 +2,7 @@ import asyncio
 from alembic.config import Config
 from alembic import command
 from src.config import settings
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 
 
 async def apply_migrations():

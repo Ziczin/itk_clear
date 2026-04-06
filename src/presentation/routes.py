@@ -6,7 +6,7 @@ from src.presentation.schemas.callback import PaymentCallbackRequest
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
 from src.application.usecases.payment_callback import PaymentCallbackUseCase
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 from src.presentation.dependencies import (
     provide_create_order_use_case,
     provide_get_order_use_case,

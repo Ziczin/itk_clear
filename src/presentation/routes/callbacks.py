@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from src.presentation.schemas.callback import PaymentCallbackRequest
 from src.application.usecases.payment_callback import PaymentCallbackUseCase
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 from src.presentation.dependencies import provide_payment_callback_use_case
 
 router = APIRouter(prefix="/api/orders", tags=["payments"])
@@ -13,28 +13,27 @@ async def payment_callback(
     use_case: PaymentCallbackUseCase = Depends(provide_payment_callback_use_case),
 ):
     """Process payment gateway webhook callbacks."""
-    async with logger("Routes.PaymentCallback"):
-        logger.info(
-            "Handling Payment Callback",
-            order_id=str(callback.order_id),
+    logger.info(
+        "Handling Payment Callback",
+        order_id=str(callback.order_id),
+        payment_status=callback.status,
+        payment_id=str(callback.payment_id),
+    )
+
+    try:
+        await use_case.execute(
+            order_id=callback.order_id,
             payment_status=callback.status,
-            payment_id=str(callback.payment_id),
+            payment_id=callback.payment_id,
+            idempotency_key=callback.idempotency_key,
         )
 
-        try:
-            await use_case.execute(
-                order_id=callback.order_id,
-                payment_status=callback.status,
-                payment_id=callback.payment_id,
-                idempotency_key=callback.idempotency_key,
-            )
+        logger.info(
+            "Callback processed successfully", order_id=str(callback.order_id)
+        )
 
-            logger.info(
-                "Callback processed successfully", order_id=str(callback.order_id)
-            )
+        return {"status": "ok"}
 
-            return {"status": "ok"}
-
-        except Exception as e:
-            logger.exception("Callback handling failed")
-            return {"status": "error", "message": str(e)}
+    except Exception as e:
+        logger.exception("Callback handling failed")
+        return {"status": "error", "message": str(e)}

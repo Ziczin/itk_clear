@@ -1,6 +1,6 @@
 import aiohttp
 from src.config import settings
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 
 
 class CatalogServiceError(Exception):
@@ -18,42 +18,41 @@ class CatalogClient:
 
     async def check_stock(self, item_id: str, quantity: int) -> dict:
         """Verify item availability against external inventory API."""
-        async with logger("Client.Catalog.CheckStock"):
-            url = f"{settings.CATALOG_URL}/api/catalog/items/{item_id}"
-            headers = {"X-API-Key": settings.CAPASHINO_API_KEY}
+        url = f"{settings.CATALOG_URL}/api/catalog/items/{item_id}"
+        headers = {"X-API-Key": settings.CAPASHINO_API_KEY}
 
-            logger.debug("Requesting stock", url=url, item_id=item_id)
+        logger.debug("Requesting stock", url=url, item_id=item_id)
 
-            async with self.session.get(url, headers=headers) as response:
-                response_text = await response.text()
+        async with self.session.get(url, headers=headers) as response:
+            response_text = await response.text()
 
-                if response.status == 404:
-                    logger.warning("Item not found in catalog", item_id=item_id)
-                    raise CatalogServiceError(f"Item {item_id} not found in catalog")
+            if response.status == 404:
+                logger.warning("Item not found in catalog", item_id=item_id)
+                raise CatalogServiceError(f"Item {item_id} not found in catalog")
 
-                if response.status != 200:
-                    logger.error(
-                        "Catalog request failed",
-                        status=response.status,
-                        error=response_text,
-                    )
-                    raise CatalogServiceError(
-                        f"Catalog API error: {response.status} - {response_text}"
-                    )
-
-                data = await response.json()
-                available_qty = data.get("available_qty", 0)
-
-                logger.debug(
-                    "Stock received", available_qty=available_qty, requested=quantity
+            if response.status != 200:
+                logger.error(
+                    "Catalog request failed",
+                    status=response.status,
+                    error=response_text,
+                )
+                raise CatalogServiceError(
+                    f"Catalog API error: {response.status} - {response_text}"
                 )
 
-                if available_qty < quantity:
-                    logger.warning(
-                        "Insufficient stock",
-                        available=available_qty,
-                        requested=quantity,
-                    )
-                    raise CatalogServiceError("Insufficient stock")
+            data = await response.json()
+            available_qty = data.get("available_qty", 0)
 
-                return data
+            logger.debug(
+                "Stock received", available_qty=available_qty, requested=quantity
+            )
+
+            if available_qty < quantity:
+                logger.warning(
+                    "Insufficient stock",
+                    available=available_qty,
+                    requested=quantity,
+                )
+                raise CatalogServiceError("Insufficient stock")
+
+            return data

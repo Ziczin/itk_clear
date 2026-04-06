@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Integer, JSON
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from src.infrastructure.database import Base
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 
 
 # --- ORM Models ---

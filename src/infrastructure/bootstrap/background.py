@@ -3,7 +3,7 @@ from src.infrastructure.messaging import OutboxPublisher, ShipmentConsumer
 from src.infrastructure.uow import UoW
 from src.infrastructure.clients.notify import NotifyClient
 from src.application.usecases.shipment_event import ShipmentEventUseCase
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 
 
 def _build_shipment_use_case_factory(http_session):

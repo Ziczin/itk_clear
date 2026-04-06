@@ -4,7 +4,7 @@ from src.domain.exceptions import (
     PaymentServiceError,
     NotificationServiceError,
 )
-from src.utils.logger import logger
+from src.utils.context_vars import logger
 from src.core.config import settings
 
 
