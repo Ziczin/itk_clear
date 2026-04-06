@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 
 from src.presentation.lifespan import lifespan
-from src.presentation.routes import order_router
+from src.presentation.routes.orders import order_router
 
 
 app = FastAPI(
