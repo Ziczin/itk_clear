@@ -5,11 +5,11 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from alembic import context
 
-# Добавляем корень проекта в sys.path, чтобы Python мог импортировать 'src'
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # noqa
 
 from src.config import settings
-from src.infrastructure.database import Base  # noqa: F401
+from src.infrastructure.database import Base  # noqa
+from src.infrastructure.models import *  # noqa
 
 
 config = context.config
