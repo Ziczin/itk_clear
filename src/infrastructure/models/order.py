@@ -14,6 +14,6 @@ class OrderDB(Base):
     quantity = Column(Integer)
     status = Column(String)
     payment_id = Column(PG_UUID(as_uuid=True), nullable=True)
-    idempotency_key = Column(PG_UUID(as_uuid=True), unique=True)
+    idempotency_key = Column(String, unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
