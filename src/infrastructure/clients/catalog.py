@@ -9,6 +9,12 @@ class CatalogServiceError(Exception):
     pass
 
 
+class ItemNotFoundInCatalogError(Exception):
+    """Raised when catalog service returns 404 code."""
+
+    pass
+
+
 class CatalogClient:
     """HTTP client for external catalog service integration."""
 
@@ -28,7 +34,7 @@ class CatalogClient:
 
             if response.status == 404:
                 logger.warning("Item not found in catalog", item_id=item_id)
-                raise CatalogServiceError(f"Item {item_id} not found in catalog")
+                raise ItemNotFoundInCatalogError(f"Item {item_id} not found in catalog")
 
             if response.status != 200:
                 logger.error(

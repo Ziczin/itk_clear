@@ -4,7 +4,10 @@ from src.presentation.schemas.order import CreateOrderRequest, OrderResponse
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
 from src.application.ports.order_repo import OrderNotFoundError, OrderDuplicateError
-from src.infrastructure.clients.catalog import CatalogServiceError
+from src.infrastructure.clients.catalog import (
+    CatalogServiceError,
+    ItemNotFoundInCatalogError,
+)
 from src.infrastructure.clients.payment import PaymentServiceError
 from src.utils.logger import logger
 from src.presentation.dependencies import (
@@ -76,8 +79,12 @@ async def create_order(
         logger.error("External service error", error=str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+    except ItemNotFoundInCatalogError as e:
+        logger.error("Item ", error=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
     except OrderNotFoundError as e:
-        logger.error("Order not found", error=str(e))
+        logger.error(f"Order with id: {request.item_id} not found", error=str(e))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except Exception:
