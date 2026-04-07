@@ -5,7 +5,7 @@ from src.infrastructure.bootstrap.database import apply_migrations
 from src.infrastructure.bootstrap.kafka import initialize_kafka_producer
 from src.infrastructure.bootstrap.background import start_background_workers
 from src.infrastructure.bootstrap.monitoring import initialize_sentry_monitoring
-from src.utils.context_vars import logger, clear_request_id
+from src.utils.logger import logger, clear_request_id
 
 
 @asynccontextmanager
