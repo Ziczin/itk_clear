@@ -9,7 +9,6 @@ import os
 from loguru import logger as _loguru_logger
 
 
-# Context variable for storing request UUID across async calls
 _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
 
 

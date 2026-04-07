@@ -3,6 +3,7 @@ import uvicorn
 
 from src.presentation.lifespan import lifespan
 from src.presentation.routes.orders import router
+from src.presentation.middleware.request_id_middleware import RequestIdMiddleware
 
 
 app = FastAPI(
@@ -10,6 +11,8 @@ app = FastAPI(
     title="Capashino Order Service",
     description="Event-driven order management service with clean architecture",
 )
+
+app.add_middleware(RequestIdMiddleware)
 
 app.include_router(router)
 
@@ -19,7 +22,6 @@ async def health():
     return {"status": "ok"}
 
 
-#
 if __name__ == "__main__":
     """Start the application with hot-reload enabled for development."""
     print("Starting Order Service in development mode with reload=True.")
