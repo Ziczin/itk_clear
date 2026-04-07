@@ -34,7 +34,7 @@ class PaymentClient:
             "Content-Type": "application/json",
         }
 
-        logger.debug(
+        logger.info(
             "Requesting payment creation",
             order_id=order_id,
             callback_url=callback_url,

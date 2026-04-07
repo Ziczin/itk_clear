@@ -27,7 +27,7 @@ class CatalogClient:
         url = f"{settings.CATALOG_URL}/api/catalog/items/{item_id}"
         headers = {"X-API-Key": settings.CAPASHINO_API_KEY}
 
-        logger.debug("Requesting stock", url=url, item_id=item_id)
+        logger.info("Requesting stock", url=url, item_id=item_id)
 
         async with self.session.get(url, headers=headers) as response:
             response_text = await response.text()
@@ -49,7 +49,7 @@ class CatalogClient:
             data = await response.json()
             available_qty = data.get("available_qty", 0)
 
-            logger.debug(
+            logger.info(
                 "Stock received", available_qty=available_qty, requested=quantity
             )
 
