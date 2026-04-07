@@ -3,6 +3,7 @@ import uvicorn
 
 from src.presentation.lifespan import lifespan
 from src.presentation.routes.orders import router
+from src.presentation.middleware import request_id_middleware
 
 
 app = FastAPI(
@@ -10,6 +11,8 @@ app = FastAPI(
     title="Capashino Order Service",
     description="Event-driven order management service with clean architecture",
 )
+
+app.middleware("http")(request_id_middleware)
 
 app.include_router(router)
 

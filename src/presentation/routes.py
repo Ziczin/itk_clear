@@ -6,7 +6,7 @@ from src.presentation.schemas.callback import PaymentCallbackRequest
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
 from src.application.usecases.payment_callback import PaymentCallbackUseCase
-from src.utils.logger import logger, set_request_id
+from src.utils.logger import logger
 from src.presentation.dependencies import (
     provide_create_order_use_case,
     provide_get_order_use_case,
@@ -23,7 +23,6 @@ async def handle_create_order(
     use_case: CreateOrderUseCase = Depends(provide_create_order_use_case),
 ):
     """Process incoming order creation requests."""
-    set_request_id()
     try:
         order = await use_case.execute(
             user_id=request.user_id,
@@ -51,7 +50,6 @@ async def handle_get_order(
     order_id: UUID, use_case: GetOrderUseCase = Depends(provide_get_order_use_case)
 ):
     """Retrieve order details by unique identifier."""
-    set_request_id()
     try:
         order = await use_case.execute(order_id=order_id)
         logger.info("Order retrieved successfully", order_id=str(order_id))
@@ -75,7 +73,6 @@ async def handle_payment_callback(
     use_case: PaymentCallbackUseCase = Depends(provide_payment_callback_use_case),
 ):
     """Process payment gateway webhook callbacks."""
-    set_request_id()
     try:
         await use_case.execute(
             order_id=request.order_id,
