@@ -6,7 +6,7 @@ from src.application.usecases.get_order import GetOrderUseCase
 from src.application.ports.order_repo import OrderNotFoundError, OrderDuplicateError
 from src.infrastructure.clients.catalog import CatalogServiceError
 from src.infrastructure.clients.payment import PaymentServiceError
-from src.utils.logger import logger
+from src.utils.logger import logger, set_request_id
 from src.presentation.dependencies import (
     provide_create_order_use_case,
     provide_get_order_use_case,
@@ -21,6 +21,7 @@ async def create_order(
     use_case: CreateOrderUseCase = Depends(provide_create_order_use_case),
 ):
     """Handle order creation requests."""
+    set_request_id()
     logger.info(
         "Handling CreateOrder request",
         user_id=request.user_id,
@@ -93,6 +94,7 @@ async def get_order(
     order_id: UUID, use_case: GetOrderUseCase = Depends(provide_get_order_use_case)
 ):
     """Retrieve order details by unique identifier."""
+    set_request_id()
     logger.info("Fetching order details", order_id=str(order_id))
 
     try:
