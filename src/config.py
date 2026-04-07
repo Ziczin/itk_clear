@@ -36,6 +36,13 @@ class Config(BaseSettings):
             f"{data['POSTGRES_DATABASE_NAME']}"
         )
 
+    def model_post_init(self, __context):
+        # Приводим HttpUrl к строке и обрезаем завершающий слэш, если он есть
+        self.CATALOG_URL = str(self.CATALOG_URL).rstrip("/")
+        self.PAYMENTS_URL = str(self.PAYMENTS_URL).rstrip("/")
+        self.NOTIFICATIONS_URL = str(self.NOTIFICATIONS_URL).rstrip("/")
+        self.PAYMENT_CALLBACK_URL = str(self.PAYMENT_CALLBACK_URL).rstrip("/")
+
     @property
     def DATABASE_URL_SYNC(self) -> str:
         """Return sync version of DATABASE_URL for Alembic CLI."""
