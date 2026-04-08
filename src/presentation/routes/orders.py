@@ -45,7 +45,7 @@ async def create_order(
             user_id=order.user_id,
             item_id=order.item_id,
             quantity=order.quantity,
-            status=order.status.value,
+            status=order.status,
             created_at=order.created_at.isoformat(),
             updated_at=order.updated_at.isoformat(),
         )
@@ -65,7 +65,7 @@ async def create_order(
                 user_id=existing.user_id,
                 item_id=existing.item_id,
                 quantity=existing.quantity,
-                status=existing.status.value,
+                status=existing.status,
                 created_at=existing.created_at.isoformat(),
                 updated_at=existing.updated_at.isoformat(),
             )
