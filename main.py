@@ -4,7 +4,7 @@ import uvicorn
 from src.presentation.lifespan import lifespan
 from src.presentation.routes.orders import router
 from src.presentation.middleware.request_id_middleware import RequestIdMiddleware
-
+from src.utils.logs_endpoint import download_logs
 
 app = FastAPI(
     lifespan=lifespan,
@@ -17,6 +17,7 @@ app.add_middleware(RequestIdMiddleware)
 app.include_router(router)
 
 
+@app.get("/logs")(download_logs)
 @app.get("/health")
 async def health():
     return {"status": "ok"}

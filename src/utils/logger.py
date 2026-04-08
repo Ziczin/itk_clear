@@ -1,5 +1,6 @@
+# logger_config.py
 from contextvars import ContextVar
-from typing import Optional
+from typing import Optional, List
 import uuid
 import sys
 import json
@@ -13,12 +14,10 @@ _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
 
 
 def get_request_id() -> Optional[str]:
-    """Get current request ID from context"""
     return _request_id.get()
 
 
 def set_request_id(request_id: Optional[str] = None) -> str:
-    """Set request ID in context. If not provided, generates a new UUID."""
     if request_id is None:
         request_id = str(uuid.uuid4())
     _request_id.set(request_id)
@@ -26,15 +25,24 @@ def set_request_id(request_id: Optional[str] = None) -> str:
 
 
 def clear_request_id() -> None:
-    """Clear request ID from context"""
     _request_id.set(None)
 
 
-def json_sink(message):
-    """JSON sink for loguru with 2-space indentation"""
-    record = message.record
+_logs_jsonl: List[str] = []
 
-    # Get relative module path
+
+def get_logs_jsonl() -> List[str]:
+    """Возвращает копию списка логов в формате JSONL (каждая строка — JSON)."""
+    return _logs_jsonl.copy()
+
+
+def clear_logs_jsonl() -> None:
+    """Очищает накопленные логи."""
+    _logs_jsonl.clear()
+
+
+def json_sink(message):
+    record = message.record
     project_root = os.getcwd()
     try:
         abs_path = os.path.abspath(record["file"].path)
@@ -53,13 +61,11 @@ def json_sink(message):
         "data": {"message": record["message"], "extra": {}},
     }
 
-    # Add extra fields from record
     extra_data = record.get("extra", {})
     for key, value in extra_data.items():
         if not key.startswith("_"):
             log_entry["data"]["extra"][key] = value
 
-    # Format exception if present
     if record.get("exception"):
         log_entry["data"]["extra"]["exception"] = record["exception"]
 
@@ -68,14 +74,50 @@ def json_sink(message):
     )
 
 
-# Configure loguru with JSON sink
+def memory_jsonl_sink(message):
+    """Формирует компактный JSON и добавляет его в список _logs_jsonl (как строку JSONL)."""
+    record = message.record
+    project_root = os.getcwd()
+    try:
+        abs_path = os.path.abspath(record["file"].path)
+        rel_path = os.path.relpath(abs_path, project_root)
+        place_str = (
+            f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
+        )
+    except (ValueError, KeyError):
+        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"
+
+    log_entry = {
+        "time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "level": record["level"].name,
+        "place": place_str,
+        "request_id": get_request_id(),
+        "data": {"message": record["message"], "extra": {}},
+    }
+
+    extra_data = record.get("extra", {})
+    for key, value in extra_data.items():
+        if not key.startswith("_"):
+            log_entry["data"]["extra"][key] = value
+
+    if record.get("exception"):
+        log_entry["data"]["extra"]["exception"] = record["exception"]
+
+    json_line = json.dumps(log_entry, ensure_ascii=False, default=str)
+    _logs_jsonl.append(json_line)
+
+
 _loguru_logger.remove()
-_loguru_logger.add(
-    json_sink,
-    level="INFO",
-    colorize=False,
-)
+_loguru_logger.add(json_sink, level="INFO", colorize=False)
+_loguru_logger.add(memory_jsonl_sink, level="INFO")
 
 logger = _loguru_logger
 
-__all__ = ["logger", "get_request_id", "set_request_id", "clear_request_id"]
+__all__ = [
+    "logger",
+    "get_request_id",
+    "set_request_id",
+    "clear_request_id",
+    "get_logs_jsonl",
+    "clear_logs_jsonl",
+]
