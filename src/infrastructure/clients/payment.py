@@ -96,7 +96,7 @@ class PaymentClient:
         retry_options = setup_retry_options()
 
         async with post_to_payment_service(
-            sesion=self.session,
+            session=self.session,
             order_id=order_id,
             url=url,
             payload=payload,
