@@ -6,6 +6,13 @@ from typing import Optional
 class Config(BaseSettings):
     """Global settings container loaded from environment variables."""
 
+    # Application settings
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8000
+    APP_RELOAD: bool = False
+    APP_LOG_LEVEL: str = "INFO"
+
+    # Database settings
     POSTGRES_HOST: str
     POSTGRES_PORT: int
     POSTGRES_DATABASE_NAME: str
@@ -14,8 +21,10 @@ class Config(BaseSettings):
 
     DATABASE_URL: Optional[str] = None
 
+    # Kafka settings
     KAFKA_BOOTSTRAP_SERVERS: str
 
+    # External API settings
     CAPASHINO_API_KEY: str
 
     CATALOG_URL: HttpUrl
@@ -28,6 +37,7 @@ class Config(BaseSettings):
 
     NOTIFICATIONS_URL: HttpUrl
 
+    # Monitoring settings
     SENTRY_DSN: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

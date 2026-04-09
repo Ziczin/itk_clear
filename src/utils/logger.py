@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import os
 
 from loguru import logger as _loguru_logger
+from src.config import settings
 
 
 _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
@@ -108,8 +109,8 @@ def memory_jsonl_sink(message):
 
 
 _loguru_logger.remove()
-_loguru_logger.add(json_sink, level="INFO", colorize=False)
-_loguru_logger.add(memory_jsonl_sink, level="INFO")
+_loguru_logger.add(json_sink, level=settings.APP_LOG_LEVEL, colorize=False)
+_loguru_logger.add(memory_jsonl_sink, level=settings.APP_LOG_LEVEL)
 
 logger = _loguru_logger
 

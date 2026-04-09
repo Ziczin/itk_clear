@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 
+from src.config import settings
 from src.presentation.lifespan import lifespan
 from src.presentation.routes.orders import router
 from src.presentation.middleware.request_id_middleware import RequestIdMiddleware
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     print("Starting Order Service in development mode with reload=True.")
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=settings.APP_HOST,
+        port=settings.APP_PORT,
+        reload=settings.APP_RELOAD,
     )
