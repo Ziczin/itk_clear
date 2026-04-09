@@ -11,13 +11,23 @@ class Config(BaseSettings):
     POSTGRES_DATABASE_NAME: str
     POSTGRES_USERNAME: str
     POSTGRES_PASSWORD: str
+
     DATABASE_URL: Optional[str] = None
+
     KAFKA_BOOTSTRAP_SERVERS: str
+
     CAPASHINO_API_KEY: str
+
     CATALOG_URL: HttpUrl
+
     PAYMENTS_URL: HttpUrl
+    PAYMENTS_RETRY_LIMIT: int = 5
+    PAYMENTS_START_TIMEOUT: float = 1.0
+    PAYMENTS_MAX_TIMEOUT: float = 10.0
+    PAYMENTS_CALLBACK_URL: HttpUrl
+
     NOTIFICATIONS_URL: HttpUrl
-    PAYMENT_CALLBACK_URL: HttpUrl
+
     SENTRY_DSN: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
@@ -41,7 +51,7 @@ class Config(BaseSettings):
         self.CATALOG_URL = str(self.CATALOG_URL).rstrip("/")
         self.PAYMENTS_URL = str(self.PAYMENTS_URL).rstrip("/")
         self.NOTIFICATIONS_URL = str(self.NOTIFICATIONS_URL).rstrip("/")
-        self.PAYMENT_CALLBACK_URL = str(self.PAYMENT_CALLBACK_URL).rstrip("/")
+        self.PAYMENTS_CALLBACK_URL = str(self.PAYMENTS_CALLBACK_URL).rstrip("/")
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
