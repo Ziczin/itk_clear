@@ -105,7 +105,6 @@ class PaymentClient:
 
         async with post_to_payment_service(
             session=self.session,
-            order_id=order_id,
             url=url,
             payload=payload,
             headers=headers,
