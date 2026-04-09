@@ -36,6 +36,12 @@ def setup_trace_config(order_id) -> TraceConfig:
 
 
 def setup_retry_options() -> ExponentialRetry:
+    logger.info(
+        "Settings of retry config attempts",
+        attempts=settings.PAYMENTS_RETRY_LIMIT,
+        start_timeout=settings.PAYMENTS_START_TIMEOUT,
+        max_timeout=settings.PAYMENTS_MAX_TIMEOUT,
+    )
     return ExponentialRetry(
         attempts=settings.PAYMENTS_RETRY_LIMIT,
         start_timeout=settings.PAYMENTS_START_TIMEOUT,
@@ -90,8 +96,10 @@ class PaymentClient:
         logger.info(
             "Requesting payment creation",
             order_id=order_id,
+            payload=payload,
             callback_url=callback_url,
         )
+
         trace_config = setup_trace_config(order_id)
         retry_options = setup_retry_options()
 
