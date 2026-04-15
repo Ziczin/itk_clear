@@ -87,11 +87,12 @@ async def create_order(
         logger.error(f"Order with id: {request.item_id} not found", error=str(e))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-    except Exception:
-        logger.exception("Order creation failed unexpectedly")
+    except Exception as e:
+        logger.exception("Order creation failed unexpectedly", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
+            error=str(e),
         )
 
 
