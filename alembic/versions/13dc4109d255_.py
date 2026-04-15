@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 33518d33eb97
+Revision ID: 13dc4109d255
 Revises:
-Create Date: 2026-04-07 09:28:32.445090
+Create Date: 2026-04-15 10:56:45.520227
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "33518d33eb97"
+revision: str = "13dc4109d255"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,7 +25,7 @@ def upgrade() -> None:
     op.create_table(
         "inbox",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("idempotency_key", sa.UUID(), nullable=True),
+        sa.Column("idempotency_key", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("idempotency_key"),
     )
@@ -45,10 +45,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "outbox",
-        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("id", sa.String(), nullable=False),
         sa.Column("event_type", sa.String(), nullable=True),
         sa.Column("payload", sa.JSON(), nullable=True),
-        sa.Column("idempotency_key", sa.UUID(), nullable=True),
+        sa.Column("idempotency_key", sa.String(), nullable=True),
         sa.Column("status", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
