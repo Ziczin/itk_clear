@@ -7,6 +7,7 @@ from src.infrastructure.clients.notify import NotifyClient
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
 from src.application.usecases.payment_callback import PaymentCallbackUseCase
+from src.utils.logger import logger
 
 
 def provide_unit_of_work():
@@ -16,6 +17,7 @@ def provide_unit_of_work():
 
 def provide_http_session():
     """Retrieve shared aiohttp client session from application state."""
+    logger.info("Try to retrieve HTTP session")
     return aiohttp.ClientSession()
 
 
