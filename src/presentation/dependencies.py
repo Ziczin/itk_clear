@@ -18,7 +18,10 @@ def provide_unit_of_work():
 def provide_http_session():
     """Retrieve shared aiohttp client session from application state."""
     logger.info("Try to retrieve HTTP session")
-    return aiohttp.ClientSession()
+    try:
+        return aiohttp.ClientSession()
+    except Exception as e:
+        logger.error("Failed to retrieve HTTP session", error=e)
 
 
 def provide_catalog_client(session=Depends(provide_http_session)):
