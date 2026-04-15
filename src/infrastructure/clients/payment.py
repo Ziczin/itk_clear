@@ -55,9 +55,8 @@ def setup_retry_options() -> ExponentialRetry:
 async def post_to_payment_service(
     *, session, url, payload, headers, trace_config, retry_options
 ):
-    async with RetryClient(
-        client_session=session, trace_configs=[trace_config]
-    ) as retry_client:
+    session  # noqa
+    async with RetryClient(trace_configs=[trace_config]) as retry_client:
         async with retry_client.post(
             url,
             json=payload,

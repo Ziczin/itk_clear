@@ -1,5 +1,4 @@
-import aiohttp
-from fastapi import Depends
+from fastapi import Depends, Request
 from src.infrastructure.uow import UoW
 from src.infrastructure.clients.catalog import CatalogClient
 from src.infrastructure.clients.payment import PaymentClient
@@ -15,14 +14,10 @@ def provide_unit_of_work():
     return UoW()
 
 
-def provide_http_session():
+def provide_http_session(request: Request):
     """Retrieve shared aiohttp client session from application state."""
-    logger.info("Try to retrieve HTTP session")
-    try:
-        return aiohttp.ClientSession()
-    except Exception as e:
-        logger.error("Failed to retrieve HTTP session", error=e)
-        raise
+    logger.info("Retrieving HTTP session from application state")
+    return request.app.state.http_session
 
 
 def provide_catalog_client(session=Depends(provide_http_session)):
