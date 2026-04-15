@@ -22,6 +22,7 @@ def provide_http_session():
         return aiohttp.ClientSession()
     except Exception as e:
         logger.error("Failed to retrieve HTTP session", error=e)
+        raise
 
 
 def provide_catalog_client(session=Depends(provide_http_session)):
