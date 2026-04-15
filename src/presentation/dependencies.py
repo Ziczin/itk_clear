@@ -1,4 +1,5 @@
-from fastapi import Request, Depends
+import aiohttp
+from fastapi import Depends
 from src.infrastructure.uow import UoW
 from src.infrastructure.clients.catalog import CatalogClient
 from src.infrastructure.clients.payment import PaymentClient
@@ -13,9 +14,9 @@ def provide_unit_of_work():
     return UoW()
 
 
-def provide_http_session(request: Request):
+def provide_http_session():
     """Retrieve shared aiohttp client session from application state."""
-    return request.app.state.http_session
+    return aiohttp.ClientSession()
 
 
 def provide_catalog_client(session=Depends(provide_http_session)):
