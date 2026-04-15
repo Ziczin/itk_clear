@@ -21,13 +21,13 @@ class UoW(IUoW):
         self._orders.session = self.session
         self._outbox.session = self.session
         self._inbox.session = self.session
-        logger.debug("UoW session opened")
+        #logger.debug("UoW session opened")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Close database session upon context exit."""
         await self.session.close()
-        logger.debug("UoW session closed")
+        #logger.debug("UoW session closed")
 
     async def commit(self):
         """Persist all staged changes to the database."""
