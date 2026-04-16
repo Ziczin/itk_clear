@@ -109,7 +109,7 @@ def memory_jsonl_sink(message):
 
 # _loguru_logger.remove()
 # _loguru_logger.add(json_sink, level="INFO", colorize=False)
-_loguru_logger.add(memory_jsonl_sink, level="INFO")
+_loguru_logger.add(memory_jsonl_sink, level="DEBUG")
 
 logger = _loguru_logger
 
