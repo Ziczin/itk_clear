@@ -24,6 +24,7 @@ async def create_order(
     use_case: CreateOrderUseCase = Depends(provide_create_order_use_case),
 ):
     """Handle order creation requests."""
+    logger.debug("Route /api/orders")
     logger.info(
         "Handling CreateOrder request",
         user_id=request.user_id,
@@ -31,6 +32,8 @@ async def create_order(
     )
 
     try:
+        logger.debug("Try to process usecase")
+
         order = await use_case.execute(
             user_id=request.user_id,
             item_id=request.item_id,
@@ -39,6 +42,7 @@ async def create_order(
         )
 
         logger.info("Order creation successful", order_id=str(order.id))
+        logger.debug("Route /api/orders returns 200")
 
         return OrderResponse(
             id=order.id,
@@ -60,6 +64,7 @@ async def create_order(
         )
 
         if existing:
+            logger.debug("Route /api/orders returns 200, existing order")
             return OrderResponse(
                 id=existing.id,
                 user_id=existing.user_id,
@@ -70,6 +75,7 @@ async def create_order(
                 updated_at=existing.updated_at.isoformat(),
             )
 
+        logger.debug("Route /api/orders returns 409")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Idempotency key already used",
@@ -101,12 +107,14 @@ async def get_order(
     order_id: UUID, use_case: GetOrderUseCase = Depends(provide_get_order_use_case)
 ):
     """Retrieve order details by unique identifier."""
+    logger.debug(r"Route /api/orders/{order_id}")
     logger.info("Fetching order details", order_id=str(order_id))
 
     try:
         order = await use_case.execute(order_id=order_id)
 
         logger.info("Order retrieved successfully", status=order.status)
+        logger.debug(r"Route /api/orders/{order_id} returns 200")
 
         return OrderResponse(
             id=order.id,
@@ -120,12 +128,14 @@ async def get_order(
 
     except OrderNotFoundError:
         logger.warning("Order not found", order_id=str(order_id))
+        logger.debug(r"Route /api/orders/{order_id} returns 404")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
         )
 
-    except Exception:
-        logger.exception("Order retrieval failed")
+    except Exception as e:
+        logger.exception("Order retrieval failed", error=str(e))
+        logger.debug(r"Route /api/orders/{order_id} returns 500")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

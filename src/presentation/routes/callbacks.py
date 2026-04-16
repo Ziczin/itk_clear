@@ -13,6 +13,7 @@ async def payment_callback(
     use_case: PaymentCallbackUseCase = Depends(provide_payment_callback_use_case),
 ):
     """Process payment gateway webhook callbacks."""
+    logger.debug("Route /payment-callback")
     logger.info(
         "Handling Payment Callback",
         order_id=str(callback.order_id),
@@ -29,9 +30,11 @@ async def payment_callback(
         )
 
         logger.info("Callback processed successfully", order_id=str(callback.order_id))
+        logger.debug("Route /payment-callback returns 200")
 
         return {"status": "ok"}
 
     except Exception as e:
         logger.exception("Callback handling failed")
+        logger.debug("Route /payment-callback returns 200 anyways")
         return {"status": "error", "message": str(e)}
