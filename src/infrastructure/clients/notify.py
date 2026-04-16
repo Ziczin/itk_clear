@@ -33,6 +33,12 @@ class NotifyClient:
         }
 
         try:
+            logger.debug(
+                "Try to dispatch notification",
+                url=url,
+                payload=payload,
+                headers=headers,
+            )
             async with self.session.post(
                 url, json=payload, headers=headers
             ) as response:
