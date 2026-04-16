@@ -1,6 +1,7 @@
 import aiohttp
 from src.config import settings
 from src.utils.logger import logger
+import tenacity
 
 
 class NotificationServiceError(Exception):
@@ -15,6 +16,29 @@ class NotifyClient:
     def __init__(self, session: aiohttp.ClientSession):
         """Initialize client with aiohttp session."""
         self.session = session
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(NotificationServiceError),
+        stop=tenacity.stop_after_attempt(5),
+        wait=tenacity.wait_incrementing(start=1, increment=1, max=20),
+    )
+    async def _send_notification_safe(
+        self, url: str, payload: dict, headers: dict, reference_id: str
+    ) -> bool:
+        async with self.session.post(url, json=payload, headers=headers) as response:
+            if response.status not in (200, 201):
+                error_text = await response.text()
+                logger.warning(
+                    "Notification dispatch failed",
+                    status=response.status,
+                    error=error_text,
+                    reference_id=reference_id,
+                )
+                raise NotificationServiceError(
+                    f"status={response.status} body={error_text}"
+                )
+            logger.info("Notification sent", reference_id=reference_id)
+            return True
 
     async def send(self, message: str, reference_id: str, idempotency_key: str) -> bool:
         """Dispatch a notification with guaranteed idempotency."""
@@ -32,30 +56,22 @@ class NotifyClient:
             "Content-Type": "application/json",
         }
 
+        logger.debug(
+            "Try to dispatch notification",
+            url=url,
+            payload=payload,
+            headers=headers,
+        )
+
         try:
-            logger.debug(
-                "Try to dispatch notification",
-                url=url,
-                payload=payload,
-                headers=headers,
+            return await self._send_notification_safe(
+                url, payload, headers, reference_id
             )
-            async with self.session.post(
-                url, json=payload, headers=headers
-            ) as response:
-                if response.status not in (200, 201):
-                    error_text = await response.text()
-                    logger.warning(
-                        "Notification dispatch failed",
-                        status=response.status,
-                        error=error_text,
-                        reference_id=reference_id,
-                    )
-                    return False
-
-                logger.info("Notification sent", reference_id=reference_id)
-
-                return True
-
+        except NotificationServiceError as e:
+            logger.error(
+                "final failure after retries", error=str(e), reference_id=reference_id
+            )
+            return False
         except aiohttp.ClientError as e:
             logger.warning(
                 "Notification client connection error",
@@ -63,7 +79,6 @@ class NotifyClient:
                 reference_id=reference_id,
             )
             return False
-
         except Exception:
             logger.exception(
                 "Notification sending failed unexpectedly",
