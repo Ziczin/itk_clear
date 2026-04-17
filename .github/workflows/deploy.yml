@@ -215,78 +215,86 @@ jobs:
           echo "API endpoint: https://lms.python-labs.ru/api/deploy-requests"
           echo "=============================================="
 
-      - name: 🔔 Send deploy request with verbose logging
+      - name: 🔐 Check LMS_API_KEY secret
         run: |
-          set -x  # print every command executed
+          if [ -z "${{ secrets.LMS_API_KEY }}" ]; then
+            echo "❌ ERROR: LMS_API_KEY is empty or not set!"
+            exit 1
+          else
+            echo "✅ LMS_API_KEY is set (length: ${#LMS_API_KEY} characters)"
+          fi
 
+      - name: 📨 Send deploy request with full logging
+        run: |
+          echo "===== Building payload ====="
           IMAGE="ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}"
           REPO="${{ github.repository }}"
           API_URL="https://lms.python-labs.ru/api/deploy-requests"
 
-          echo "Preparing deployment payload:"
-          PAYLOAD=$(cat <<EOF
+          echo "Image: $IMAGE"
+          echo "Repository: $REPO"
+          echo "API URL: $API_URL"
+
+          # Create payload as a file to avoid escaping issues
+          cat > payload.json <<'EOF'
           {
-            "image": "$IMAGE",
-            "repository": "$REPO"
+            "image": "IMAGE_PLACEHOLDER",
+            "repository": "REPO_PLACEHOLDER"
           }
           EOF
-          )
-          echo "$PAYLOAD" | jq '.' || echo "Raw payload: $PAYLOAD"
 
-          echo "Sending POST request to $API_URL"
-          echo "Headers: Content-Type: application/json, X-API-Key: [REDACTED]"
+          # Replace placeholders with actual values using sed (safer than variable expansion in heredoc)
+          sed -i "s|IMAGE_PLACEHOLDER|$IMAGE|g" payload.json
+          sed -i "s|REPO_PLACEHOLDER|$REPO|g" payload.json
 
-          # Use verbose curl and capture everything
-          HTTP_CODE=$(curl -v -s -o response.txt -w "%{http_code}" -X POST \
+          echo "Payload file content:"
+          cat payload.json
+          echo ""
+
+          echo "===== Sending request with curl (full verbose) ====="
+          # Use a temporary file for stderr to capture all curl verbose output
+          HTTP_CODE=$(curl --verbose --trace-ascii curl_trace.txt \
+            -X POST \
             -H "Content-Type: application/json" \
             -H "X-API-Key: ${{ secrets.LMS_API_KEY }}" \
-            -d "$PAYLOAD" \
-            "$API_URL")
+            --data @payload.json \
+            -o response.txt \
+            -w "%{http_code}" \
+            "$API_URL" 2>curl_verbose.log)
 
-          echo "Curl exit code: $?"
+          CURL_EXIT=$?
+          echo "Curl exit code: $CURL_EXIT"
           echo "HTTP status code: $HTTP_CODE"
 
-          echo "Response body:"
+          echo "===== Response body ====="
           cat response.txt
+          echo ""
 
-          echo "Verbose curl log (from stderr) not saved, but check above output"
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Deployment failed with status code $HTTP_CODE"
-            echo "Full response details:"
-            cat response.txt
+          if [ "$HTTP_CODE" != "200" ] || [ $CURL_EXIT -ne 0 ]; then
+            echo "===== ❌ Deployment failed ====="
+            echo "--- Curl verbose log ---"
+            cat curl_verbose.log
+            echo "--- Curl ASCII trace ---"
+            cat curl_trace.txt
+            echo "--- End of logs ---"
             exit 1
           else
-            echo "✅ Deployment request accepted successfully!"
+            echo "===== ✅ Deployment request accepted ====="
           fi
 
-          set +x
-
-      - name: 📨 Parse deployment response
+      - name: 📋 Parse response (if successful)
         if: success()
         run: |
           if [ -f response.txt ]; then
-            echo "Parsing deployment response:"
+            echo "Attempting to parse JSON response:"
             if command -v jq &> /dev/null; then
-              echo "Response JSON:"
-              jq '.' response.txt
-              # Extract potential deployment ID or message
-              DEPLOY_ID=$(jq -r '.deployment_id // .id // empty' response.txt)
-              if [ -n "$DEPLOY_ID" ]; then
-                echo "Deployment ID: $DEPLOY_ID"
-              fi
-              MESSAGE=$(jq -r '.message // .status // empty' response.txt)
-              if [ -n "$MESSAGE" ]; then
-                echo "Message: $MESSAGE"
-              fi
+              jq '.' response.txt || echo "Invalid JSON"
             else
-              echo "Raw response:"
+              echo "jq not available, showing raw response:"
               cat response.txt
             fi
-          else
-            echo "No response.txt file found"
           fi
 
-      - name: 🧹 Cleanup response file
+      - name: 🧹 Cleanup temporary files
         if: always()
-        run: rm -f response.txt
+        run: rm -f payload.json response.txt curl_verbose.log curl_trace.txt
