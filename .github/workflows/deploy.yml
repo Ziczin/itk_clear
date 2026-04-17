@@ -9,18 +9,38 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Ruff format check
+      - name: 🖨️ Environment information
+        run: |
+          echo "=============================================="
+          echo "LINT JOB ENVIRONMENT"
+          echo "=============================================="
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Arch: ${{ runner.arch }}"
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub SHA: ${{ github.sha }}"
+          echo "GitHub Actor: ${{ github.actor }}"
+          echo "Python version: $(python3 --version)"
+          echo "Working directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          echo "=============================================="
+
+      - name: 🔍 Ruff format check
         uses: astral-sh/ruff-action@v3
         with:
           args: format --check .
+        env:
+          RUFF_OUTPUT_FORMAT: full   # более подробный вывод от ruff
 
-      - name: Run Ruff lint check
+      - name: 🧹 Ruff lint check
         uses: astral-sh/ruff-action@v3
         with:
           args: check .
+        env:
+          RUFF_OUTPUT_FORMAT: full
 
   build:
     needs: lint
@@ -30,31 +50,80 @@ jobs:
       repo: ${{ steps.repo.outputs.repo }}
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: 🖨️ Build environment info
+        run: |
+          echo "=============================================="
+          echo "BUILD JOB ENVIRONMENT"
+          echo "=============================================="
+          echo "Date: $(date -u)"
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub SHA: ${{ github.sha }}"
+          echo "GitHub Repository: ${{ github.repository }}"
+          echo "GitHub Actor: ${{ github.actor }}"
+          echo "GitHub Event Name: ${{ github.event_name }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Arch: ${{ runner.arch }}"
+          echo "Runner Name: ${{ runner.name }}"
+          echo "Docker version:"
+          docker version
+          echo "Docker buildx version:"
+          docker buildx version
+          echo "QEMU binfmt status:"
+          update-binfmts --display || echo "binfmt not available (expected before QEMU setup)"
+          echo "Working directory: $(pwd)"
+          echo "Directory tree (first 3 levels):"
+          tree -L 3 -I '.git' || ls -R | head -n 100
+          echo "=============================================="
 
-      - name: Set up Docker Buildx
+      - name: 🐳 Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64,linux/amd64
+
+      - name: 🔧 Verify QEMU installation
+        run: |
+          echo "QEMU emulators available:"
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          echo "Registered binfmt entries:"
+          cat /proc/sys/fs/binfmt_misc/* 2>/dev/null || echo "binfmt_misc not mounted"
+
+      - name: 🛠️ Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           buildkitd-flags: --debug
+          driver-opts: |
+            network=host
+            image=moby/buildkit:latest
 
-      - name: Login to GitHub Container Registry
+      - name: 📊 Buildx info
+        run: |
+          echo "Buildx builder list:"
+          docker buildx ls
+          echo "Buildx inspect:"
+          docker buildx inspect --bootstrap
+
+      - name: 🔐 Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set lowercase repository name
+      - name: 🏷️ Set lowercase repository name
         id: repo
-        run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        run: |
+          echo "Original repository: ${{ github.repository }}"
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "Lowercase repository: $REPO_LOWER"
+          echo "repo=$REPO_LOWER" >> $GITHUB_OUTPUT
+          echo "✅ Repository name converted and saved."
 
-      - name: Extract metadata
+      - name: 🏷️ Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -63,7 +132,14 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
 
-      - name: Cache Python dependencies
+      - name: 📋 Show generated tags
+        run: |
+          echo "Generated Docker tags:"
+          echo "${{ steps.meta.outputs.tags }}"
+          echo "JSON metadata:"
+          echo '${{ steps.meta.outputs.json }}' | jq '.' || echo 'jq not available, raw: ${{ steps.meta.outputs.json }}'
+
+      - name: 📦 Cache Python dependencies
         uses: actions/cache@v4
         id: pip-cache
         with:
@@ -74,8 +150,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Build and push (with cache)
+      - name: 📌 Cache status
+        run: |
+          if [ "${{ steps.pip-cache.outputs.cache-hit }}" == "true" ]; then
+            echo "✅ Cache hit for Python dependencies"
+          else
+            echo "⚠️ Cache miss - dependencies will be downloaded"
+          fi
+
+      - name: 📄 Dockerfile content (for debug)
+        run: |
+          echo "=============================================="
+          echo "Dockerfile contents:"
+          echo "=============================================="
+          cat Dockerfile
+          echo "=============================================="
+          echo "Requirements file:"
+          cat requirements.txt || echo "No requirements.txt found"
+          echo "=============================================="
+
+      - name: 🏗️ Build and push Docker image
         uses: docker/build-push-action@v5
+        id: build
         with:
           context: .
           platforms: linux/arm64,linux/amd64
@@ -86,23 +182,111 @@ jobs:
           cache-from: type=gha,scope=${{ steps.repo.outputs.repo }}
           cache-to: type=gha,mode=max,scope=${{ steps.repo.outputs.repo }}
           file: ./Dockerfile
+          build-args: |
+            BUILDKIT_PROGRESS=plain
+
+      - name: 🖼️ Build summary
+        run: |
+          echo "=============================================="
+          echo "BUILD COMPLETED"
+          echo "=============================================="
+          echo "Image digest: ${{ steps.build.outputs.digest }}"
+          echo "Image ID: ${{ steps.build.outputs.imageid }}"
+          echo "Tags pushed:"
+          echo "  - ghcr.io/${{ steps.repo.outputs.repo }}:${{ github.sha }}"
+          echo "  - ghcr.io/${{ steps.repo.outputs.repo }}:latest"
+          echo "=============================================="
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send deploy request
+      - name: 🖨️ Deploy job environment
         run: |
-          HTTP_CODE=$(curl -s -o response.txt -w "%{http_code}" -X POST \
+          echo "=============================================="
+          echo "DEPLOY JOB ENVIRONMENT"
+          echo "=============================================="
+          echo "Date: $(date -u)"
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub SHA: ${{ github.sha }}"
+          echo "GitHub Repository: ${{ github.repository }}"
+          echo "Image to deploy: ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}"
+          echo "API endpoint: https://lms.python-labs.ru/api/deploy-requests"
+          echo "=============================================="
+
+      - name: 🔔 Send deploy request with verbose logging
+        run: |
+          set -x  # print every command executed
+
+          IMAGE="ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          API_URL="https://lms.python-labs.ru/api/deploy-requests"
+
+          echo "Preparing deployment payload:"
+          PAYLOAD=$(cat <<EOF
+          {
+            "image": "$IMAGE",
+            "repository": "$REPO"
+          }
+          EOF
+          )
+          echo "$PAYLOAD" | jq '.' || echo "Raw payload: $PAYLOAD"
+
+          echo "Sending POST request to $API_URL"
+          echo "Headers: Content-Type: application/json, X-API-Key: [REDACTED]"
+
+          # Use verbose curl and capture everything
+          HTTP_CODE=$(curl -v -s -o response.txt -w "%{http_code}" -X POST \
             -H "Content-Type: application/json" \
             -H "X-API-Key: ${{ secrets.LMS_API_KEY }}" \
-            -d '{"image":"ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}","repository":"${{ github.repository }}"}' \
-            https://lms.python-labs.ru/api/deploy-requests)
+            -d "$PAYLOAD" \
+            "$API_URL")
+
+          echo "Curl exit code: $?"
+          echo "HTTP status code: $HTTP_CODE"
+
+          echo "Response body:"
+          cat response.txt
+
+          echo "Verbose curl log (from stderr) not saved, but check above output"
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "Deployment failed with status code $HTTP_CODE"
-            echo "Response body:"
+            echo "❌ Deployment failed with status code $HTTP_CODE"
+            echo "Full response details:"
             cat response.txt
             exit 1
+          else
+            echo "✅ Deployment request accepted successfully!"
           fi
+
+          set +x
+
+      - name: 📨 Parse deployment response
+        if: success()
+        run: |
+          if [ -f response.txt ]; then
+            echo "Parsing deployment response:"
+            if command -v jq &> /dev/null; then
+              echo "Response JSON:"
+              jq '.' response.txt
+              # Extract potential deployment ID or message
+              DEPLOY_ID=$(jq -r '.deployment_id // .id // empty' response.txt)
+              if [ -n "$DEPLOY_ID" ]; then
+                echo "Deployment ID: $DEPLOY_ID"
+              fi
+              MESSAGE=$(jq -r '.message // .status // empty' response.txt)
+              if [ -n "$MESSAGE" ]; then
+                echo "Message: $MESSAGE"
+              fi
+            else
+              echo "Raw response:"
+              cat response.txt
+            fi
+          else
+            echo "No response.txt file found"
+          fi
+
+      - name: 🧹 Cleanup response file
+        if: always()
+        run: rm -f response.txt
