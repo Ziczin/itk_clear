@@ -33,7 +33,7 @@ jobs:
         with:
           args: format --check .
         env:
-          RUFF_OUTPUT_FORMAT: full   # более подробный вывод от ruff
+          RUFF_OUTPUT_FORMAT: full
 
       - name: 🧹 Ruff lint check
         uses: astral-sh/ruff-action@v3
@@ -224,75 +224,108 @@ jobs:
             echo "✅ LMS_API_KEY is set (length: ${#LMS_API_KEY} characters)"
           fi
 
-      - name: 📨 Send deploy request with full logging
+      - name: 📨 Send deploy request with retry on 'deploying' status
         run: |
-          echo "===== Building payload ====="
+          set -e  # exit on error
+
           IMAGE="ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}"
           REPO="${{ github.repository }}"
           API_URL="https://lms.python-labs.ru/api/deploy-requests"
+          MAX_RETRIES=5
+          RETRY_DELAY=10
 
-          echo "Image: $IMAGE"
-          echo "Repository: $REPO"
-          echo "API URL: $API_URL"
-
-          # Create payload as a file to avoid escaping issues
-          cat > payload.json <<'EOF'
+          echo "===== Preparing payload ====="
+          # Create payload file
+          cat > payload.json <<EOF
           {
-            "image": "IMAGE_PLACEHOLDER",
-            "repository": "REPO_PLACEHOLDER"
+            "image": "$IMAGE",
+            "repository": "$REPO"
           }
           EOF
 
-          # Replace placeholders with actual values using sed (safer than variable expansion in heredoc)
-          sed -i "s|IMAGE_PLACEHOLDER|$IMAGE|g" payload.json
-          sed -i "s|REPO_PLACEHOLDER|$REPO|g" payload.json
-
-          echo "Payload file content:"
+          echo "Payload content:"
           cat payload.json
           echo ""
 
-          echo "===== Sending request with curl (full verbose) ====="
-          # Use a temporary file for stderr to capture all curl verbose output
-          HTTP_CODE=$(curl --verbose --trace-ascii curl_trace.txt \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-API-Key: ${{ secrets.LMS_API_KEY }}" \
-            --data @payload.json \
-            -o response.txt \
-            -w "%{http_code}" \
-            "$API_URL" 2>curl_verbose.log)
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "===== Attempt $attempt of $MAX_RETRIES ====="
+            
+            # Send request with full tracing
+            HTTP_CODE=$(curl --verbose --trace-ascii curl_trace.txt \
+              -X POST \
+              -H "Content-Type: application/json" \
+              -H "X-API-Key: ${{ secrets.LMS_API_KEY }}" \
+              --data @payload.json \
+              -o response.txt \
+              -w "%{http_code}" \
+              "$API_URL" 2>curl_verbose.log)
+            
+            CURL_EXIT=$?
+            RESPONSE_BODY=$(cat response.txt)
 
-          CURL_EXIT=$?
-          echo "Curl exit code: $CURL_EXIT"
-          echo "HTTP status code: $HTTP_CODE"
+            echo "Curl exit code: $CURL_EXIT"
+            echo "HTTP status code: $HTTP_CODE"
+            echo "Response body:"
+            echo "$RESPONSE_BODY"
+            echo ""
 
-          echo "===== Response body ====="
-          cat response.txt
-          echo ""
+            # Success case
+            if [[ "$HTTP_CODE" == "200" ]] && [[ $CURL_EXIT -eq 0 ]]; then
+              echo "✅ Deployment request accepted successfully!"
+              exit 0
+            fi
 
-          if [ "$HTTP_CODE" != "200" ] || [ $CURL_EXIT -ne 0 ]; then
-            echo "===== ❌ Deployment failed ====="
+            # Check if it's the "already deploying" error
+            if [[ "$HTTP_CODE" == "500" ]] && echo "$RESPONSE_BODY" | grep -q "cannot deploy from deploying status"; then
+              if [[ $attempt -lt $MAX_RETRIES ]]; then
+                echo "⚠️ Service is still deploying. Waiting $RETRY_DELAY seconds before retry..."
+                sleep $RETRY_DELAY
+                continue
+              else
+                echo "❌ Max retries reached while waiting for 'deploying' status to clear."
+                echo "--- Curl verbose log ---"
+                cat curl_verbose.log
+                echo "--- Curl ASCII trace ---"
+                cat curl_trace.txt
+                exit 1
+              fi
+            fi
+
+            # Any other error (non-200, or 500 without the expected message)
+            echo "❌ Deployment failed with unexpected error (HTTP $HTTP_CODE)"
             echo "--- Curl verbose log ---"
             cat curl_verbose.log
             echo "--- Curl ASCII trace ---"
             cat curl_trace.txt
-            echo "--- End of logs ---"
             exit 1
-          else
-            echo "===== ✅ Deployment request accepted ====="
-          fi
+          done
 
-      - name: 📋 Parse response (if successful)
+          # Should never reach here
+          echo "❌ Unexpected exit from retry loop"
+          exit 1
+
+      - name: 📋 Parse deployment response
         if: success()
         run: |
           if [ -f response.txt ]; then
-            echo "Attempting to parse JSON response:"
+            echo "Parsing deployment response:"
             if command -v jq &> /dev/null; then
-              jq '.' response.txt || echo "Invalid JSON"
+              echo "Response JSON:"
+              jq '.' response.txt
+              DEPLOY_ID=$(jq -r '.deployment_id // .id // empty' response.txt)
+              if [ -n "$DEPLOY_ID" ]; then
+                echo "Deployment ID: $DEPLOY_ID"
+              fi
+              MESSAGE=$(jq -r '.message // .status // empty' response.txt)
+              if [ -n "$MESSAGE" ]; then
+                echo "Message: $MESSAGE"
+              fi
             else
-              echo "jq not available, showing raw response:"
+              echo "Raw response:"
               cat response.txt
             fi
+          else
+            echo "No response.txt file found"
           fi
 
       - name: 🧹 Cleanup temporary files
