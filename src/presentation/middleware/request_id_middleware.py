@@ -14,7 +14,10 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             response.headers["X-Request-ID"] = get_request_id()
-            logger.debug("Outgoing response X-Request-ID: %s", response.headers.get("X-Request-ID"))
+            logger.debug(
+                "Outgoing response X-Request-ID: %s",
+                response.headers.get("X-Request-ID"),
+            )
             return response
         finally:
             clear_request_id()
