@@ -48,14 +48,13 @@ async def create_order(
         )
 
         order_response = OrderResponse(
-            id=order.id,
+            id=order.payment_id,
             user_id=order.user_id,
             item_id=order.item_id,
             quantity=order.quantity,
             status=order.status,
             created_at=order.created_at.isoformat(),
             updated_at=order.updated_at.isoformat(),
-            payment_id=order.payment_id,
         )
 
         logger.debug("Route /api/orders returns 200", order=order_response.model_dump())
