@@ -21,14 +21,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
                     f"{request.method} {request.url.path} [{response.status_code}]",
                     response_body=json.loads(resp_b),
                 )
-                response.headers["X-Request-ID"] = get_request_id()
                 return Response(
                     content=resp_b,
                     status_code=response.status_code,
                     headers=dict(response.headers),
                     media_type=response.media_type,
                 )
-            response.headers["X-Request-ID"] = get_request_id()
             return response
         finally:
             clear_request_id()
