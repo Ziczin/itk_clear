@@ -6,28 +6,33 @@ from src.utils.logger import set_request_id, clear_request_id, get_request_id, l
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID")
-        set_request_id(request_id)
-
-        body = await request.body()
-        request._receive = lambda: {"type": "http.request", "body": body}
-        logger.debug(f"REQUEST BODY: {body.decode('utf-8', errors='replace')}")
-
+        set_request_id(request.headers.get("X-Request-ID"))
         try:
+            req_id = get_request_id()
+
+            req_body = await request.body()
+            logger.info(
+                f"{request.method} {request.url.path}",
+                request_body=req_body.decode("utf-8", errors="replace"),
+            )
+
             response = await call_next(request)
-            response.headers["X-Request-ID"] = get_request_id()
 
-            response_body = b"".join([chunk async for chunk in response.body_iterator])
-            response = Response(
-                response_body,
-                response.status_code,
-                response.headers,
-                response.media_type,
-            )
-            logger.debug(
-                f"RESPONSE BODY: {response_body.decode('utf-8', errors='replace')}"
+            resp_body = b""
+            async for chunk in response.body_iterator:
+                resp_body += chunk
+
+            logger.info(
+                f"{request.method} {request.url.path} [{response.status_code}]",
+                response_body=resp_body.decode("utf-8", errors="replace"),
             )
 
-            return response
+            response.headers["X-Request-ID"] = req_id
+            return Response(
+                content=resp_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
         finally:
             clear_request_id()
