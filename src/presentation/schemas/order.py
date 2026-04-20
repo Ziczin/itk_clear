@@ -21,4 +21,3 @@ class OrderResponse(BaseModel):
     status: str
     created_at: str
     updated_at: str
-    payment_id: UUID
