@@ -52,6 +52,7 @@ async def create_order(
             status=order.status,
             created_at=order.created_at.isoformat(),
             updated_at=order.updated_at.isoformat(),
+            payment_id=order.payment_id,
         )
 
     except OrderDuplicateError:

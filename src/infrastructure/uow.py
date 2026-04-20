@@ -32,7 +32,7 @@ class UoW(IUoW):
     async def commit(self):
         """Persist all staged changes to the database."""
         await self.session.commit()
-        logger.info("UoW transaction committed")
+        logger.debug("UoW transaction committed")
 
     async def rollback(self):
         """Revert all staged changes in the current session."""
