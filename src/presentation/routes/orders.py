@@ -46,9 +46,8 @@ async def create_order(
             order_id=str(order.id),
             payment_id=str(order.payment_id),
         )
-        logger.debug("Route /api/orders returns 200")
 
-        return OrderResponse(
+        order_response = OrderResponse(
             id=order.id,
             user_id=order.user_id,
             item_id=order.item_id,
@@ -58,6 +57,9 @@ async def create_order(
             updated_at=order.updated_at.isoformat(),
             payment_id=order.payment_id,
         )
+
+        logger.debug("Route /api/orders returns 200", order=order_response.model_dump())
+        return order_response
 
     except OrderDuplicateError:
         logger.warning(
