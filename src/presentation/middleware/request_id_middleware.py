@@ -1,10 +1,7 @@
-import logging
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from src.utils.logger import set_request_id, clear_request_id, get_request_id
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import set_request_id, clear_request_id, get_request_id, logger
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
