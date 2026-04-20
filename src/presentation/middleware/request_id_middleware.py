@@ -1,8 +1,30 @@
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from src.utils.logger import set_request_id, clear_request_id
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """FastAPI middleware that sets a unique request ID for each incoming HTTP request."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID")
+        set_request_id(request_id)
+
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            clear_request_id()
+
+
+"""
 import json
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from src.utils.logger import set_request_id, clear_request_id, get_request_id, logger
+
+
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -30,3 +52,4 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             clear_request_id()
+"""
