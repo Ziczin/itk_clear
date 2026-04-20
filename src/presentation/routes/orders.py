@@ -41,7 +41,11 @@ async def create_order(
             idempotency_key=request.idempotency_key,
         )
 
-        logger.info("Order creation successful", order_id=str(order.id))
+        logger.info(
+            "Order creation successful",
+            order_id=str(order.id),
+            payment_id=str(order.payment_id),
+        )
         logger.debug("Route /api/orders returns 200")
 
         return OrderResponse(
