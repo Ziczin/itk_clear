@@ -1,19 +1,21 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from src.presentation.schemas.order import CreateOrderRequest, OrderResponse
+
+from src.application.ports.order_repo import OrderDuplicateError, OrderNotFoundError
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
-from src.application.ports.order_repo import OrderNotFoundError, OrderDuplicateError
 from src.infrastructure.clients.catalog import (
     CatalogServiceError,
     ItemNotFoundInCatalogError,
 )
 from src.infrastructure.clients.payment import PaymentServiceError
-from src.utils.logger import logger
 from src.presentation.dependencies import (
     provide_create_order_use_case,
     provide_get_order_use_case,
 )
+from src.presentation.schemas.order import CreateOrderRequest, OrderResponse
+from src.utils.logger import logger
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -134,7 +136,7 @@ async def get_order(
             user_id=order.user_id,
             item_id=order.item_id,
             quantity=order.quantity,
-            status=order.status.value,
+            status=order.status,
             created_at=order.created_at.isoformat(),
             updated_at=order.updated_at.isoformat(),
         )
