@@ -48,7 +48,7 @@ async def create_order(
         )
 
         order_response = OrderResponse(
-            id=order.payment_id,
+            id=order.id,
             user_id=order.user_id,
             item_id=order.item_id,
             quantity=order.quantity,
