@@ -29,7 +29,7 @@ class NotifyClient:
             if response.status not in (200, 201):
                 error_text = await response.text()
                 logger.warning(
-                    "Notification dispatch failed",
+                    "NOTIFY CLIENT | Notification dispatch failed",
                     status=response.status,
                     error=error_text,
                     reference_id=reference_id,
@@ -37,12 +37,11 @@ class NotifyClient:
                 raise NotificationServiceError(
                     f"status={response.status} body={error_text}"
                 )
-            logger.info("Notification sent", reference_id=reference_id)
+            logger.info("NOTIFY CLIENT | Notification sent", reference_id=reference_id)
             return True
 
     async def send(self, message: str, reference_id: str, idempotency_key: str) -> bool:
         """Dispatch a notification with guaranteed idempotency."""
-        logger.info("Client.Notification.Send")
         url = f"{settings.NOTIFICATIONS_URL}/api/notifications"
 
         payload = {
@@ -57,7 +56,7 @@ class NotifyClient:
         }
 
         logger.debug(
-            "Try to dispatch notification",
+            "NOTIFY CLIENT | Try to dispatch notification",
             url=url,
             payload=payload,
             headers=headers,
@@ -69,19 +68,21 @@ class NotifyClient:
             )
         except NotificationServiceError as e:
             logger.error(
-                "final failure after retries", error=str(e), reference_id=reference_id
+                "NOTIFY CLIENT | Final failure after retries",
+                error=str(e),
+                reference_id=reference_id,
             )
             return False
         except aiohttp.ClientError as e:
             logger.warning(
-                "Notification client connection error",
+                "NOTIFY CLIENT | Notification client connection error",
                 error=str(e),
                 reference_id=reference_id,
             )
             return False
         except Exception:
             logger.exception(
-                "Notification sending failed unexpectedly",
+                "NOTIFY CLIENT | Notification sending failed unexpectedly",
                 reference_id=reference_id,
             )
             return False

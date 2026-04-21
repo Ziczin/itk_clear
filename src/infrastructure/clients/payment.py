@@ -19,12 +19,14 @@ def setup_trace_config(order_id) -> TraceConfig:
 
     async def on_request_start(session, ctx, params):
         attempt = ctx.trace_request_ctx.get("current_attempt", 0) + 1
-        logger.debug("Payment attempt", attempt=attempt, order_id=order_id)
+        logger.debug(
+            "PAYMENT CLIENT | Payment attempt", attempt=attempt, order_id=order_id
+        )
 
     async def on_request_exception(session, ctx, params):
         attempt = ctx.trace_request_ctx.get("current_attempt", 0) + 1
         logger.warning(
-            "Payment attempt failed",
+            "PAYMENT CLIENT | Payment attempt failed",
             attempt=attempt,
             error=str(params.exception),
             order_id=order_id,
@@ -37,7 +39,7 @@ def setup_trace_config(order_id) -> TraceConfig:
 
 def setup_retry_options() -> ExponentialRetry:
     logger.info(
-        "Settings of retry config attempts",
+        "PAYMENT CLIENT | Settings of retry config attempts",
         attempts=settings.PAYMENTS_RETRY_LIMIT,
         start_timeout=settings.PAYMENTS_START_TIMEOUT,
         max_timeout=settings.PAYMENTS_MAX_TIMEOUT,
@@ -76,7 +78,6 @@ class PaymentClient:
 
     async def create(self, order_id: str, amount: str, idempotency_key: str) -> dict:
         """Initialize a payment session with the external provider."""
-        logger.info("Client.Payment.Create")
         callback_url = settings.PAYMENTS_CALLBACK_URL
         url = f"{settings.PAYMENTS_URL}/api/payments"
 
@@ -93,7 +94,7 @@ class PaymentClient:
         }
 
         logger.info(
-            "Requesting payment creation",
+            "PAYMENT CLIENT | Requesting payment creation",
             order_id=order_id,
             payload=payload,
             callback_url=callback_url,
@@ -114,17 +115,19 @@ class PaymentClient:
 
             if response.status not in (200, 201):
                 logger.error(
-                    "Payment request failed",
+                    "PAYMENT CLIENT | Payment request failed",
                     status=response.status,
                     error=response_text,
                     order_id=order_id,
                 )
                 raise PaymentServiceError(
-                    f"Payment API error: {response.status} - {response_text}"
+                    f"PAYMENT CLIENT | Payment API error: {response.status} - {response_text}"
                 )
 
             result = await response.json()
             logger.info(
-                "Payment created", payment_id=result.get("id"), order_id=order_id
+                "PAYMENT CLIENT | Payment created",
+                payment_id=result.get("id"),
+                order_id=order_id,
             )
             return result

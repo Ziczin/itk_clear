@@ -27,18 +27,20 @@ class CatalogClient:
         url = f"{settings.CATALOG_URL}/api/catalog/items/{item_id}"
         headers = {"X-API-Key": settings.CAPASHINO_API_KEY}
 
-        logger.info("Requesting stock", url=url, item_id=item_id)
+        logger.info("CATALOG CLIENT | Requesting stock", url=url, item_id=item_id)
 
         async with self.session.get(url, headers=headers) as response:
             response_text = await response.text()
 
             if response.status == 404:
-                logger.warning("Item not found in catalog", item_id=item_id)
+                logger.warning(
+                    "CATALOG CLIENT | Item not found in catalog", item_id=item_id
+                )
                 raise ItemNotFoundInCatalogError(f"Item {item_id} not found in catalog")
 
             if response.status != 200:
                 logger.error(
-                    "Catalog request failed",
+                    "CATALOG CLIENT | Catalog request failed",
                     status=response.status,
                     error=response_text,
                 )
@@ -50,12 +52,14 @@ class CatalogClient:
             available_qty = data.get("available_qty", 0)
 
             logger.info(
-                "Stock received", available_qty=available_qty, requested=quantity
+                "CATALOG CLIENT | Stock received",
+                available_qty=available_qty,
+                requested=quantity,
             )
 
             if available_qty < quantity:
                 logger.warning(
-                    "Insufficient stock",
+                    "CATALOG CLIENT | Insufficient stock",
                     available=available_qty,
                     requested=quantity,
                 )

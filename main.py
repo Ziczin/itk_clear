@@ -2,7 +2,8 @@ from fastapi import FastAPI
 import uvicorn
 
 from src.presentation.lifespan import lifespan
-from src.presentation.routes.orders import router
+from src.presentation.routes.orders import router as orders_router
+from src.presentation.routes.callbacks import router as callbacks_router
 from src.presentation.middleware.request_id_middleware import RequestIdMiddleware
 from src.utils.logs_endpoint import download_logs
 
@@ -14,7 +15,8 @@ app = FastAPI(
 
 app.add_middleware(RequestIdMiddleware)
 
-app.include_router(router)
+app.include_router(orders_router)
+app.include_router(callbacks_router)
 
 
 @app.get("/logs")(download_logs)

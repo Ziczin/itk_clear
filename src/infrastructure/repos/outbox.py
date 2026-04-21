@@ -2,6 +2,7 @@ from sqlalchemy import select, update
 from src.application.ports.outbox_repo import IOutboxRepo
 from src.infrastructure.models.outbox import OutboxDB
 from uuid import UUID
+from src.utils.logger import logger
 
 
 class OutboxRepo(IOutboxRepo):
@@ -12,6 +13,13 @@ class OutboxRepo(IOutboxRepo):
 
     async def add(self, entry):
         """Queue a new event entry for asynchronous publishing."""
+        logger.info(
+            "Adding entry to outbox",
+            id=entry.id,
+            event_type=entry.event_type,
+            payload=entry.payload,
+            idempotency_key=entry.idempotency_key,
+        )
         db_entry = OutboxDB(
             id=entry.id,
             event_type=entry.event_type,
