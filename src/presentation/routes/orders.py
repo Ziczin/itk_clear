@@ -24,15 +24,14 @@ async def create_order(
     use_case: CreateOrderUseCase = Depends(provide_create_order_use_case),
 ):
     """Handle order creation requests."""
-    logger.debug("Route /api/orders")
     logger.info(
-        "Handling CreateOrder request",
+        "ROUTE /api/orders | Handling CreateOrder request",
         user_id=request.user_id,
         item_id=str(request.item_id),
     )
 
     try:
-        logger.debug("Try to process usecase")
+        logger.debug("ROUTE /api/orders | Try to process usecase")
 
         order = await use_case.execute(
             user_id=request.user_id,
@@ -42,7 +41,7 @@ async def create_order(
         )
 
         logger.info(
-            "Order creation successful",
+            "ROUTE /api/orders | Order creation successful",
             order_id=str(order.id),
             payment_id=str(order.payment_id),
         )
@@ -57,12 +56,15 @@ async def create_order(
             updated_at=order.updated_at.isoformat(),
         )
 
-        logger.debug("Route /api/orders returns 200", order=order_response.model_dump())
+        logger.debug(
+            "ROUTE /api/orders | returns 200", order=order_response.model_dump()
+        )
         return order_response
 
     except OrderDuplicateError:
         logger.warning(
-            "Duplicate order request", idempotency_key=str(request.idempotency_key)
+            "ROUTE /api/orders | Duplicate order request",
+            idempotency_key=str(request.idempotency_key),
         )
 
         existing = await use_case.uow.orders.get_by_idempotency_key(
@@ -70,7 +72,7 @@ async def create_order(
         )
 
         if existing:
-            logger.debug("Route /api/orders returns 200, existing order")
+            logger.debug("ROUTE /api/orders | returns 200, existing order")
             return OrderResponse(
                 id=existing.id,
                 user_id=existing.user_id,
@@ -81,26 +83,31 @@ async def create_order(
                 updated_at=existing.updated_at.isoformat(),
             )
 
-        logger.debug("Route /api/orders returns 409")
+        logger.debug("ROUTE /api/orders | returns 409")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Idempotency key already used",
         )
 
     except (CatalogServiceError, PaymentServiceError) as e:
-        logger.error("External service error", error=str(e))
+        logger.error("ROUTE /api/orders | External service error", error=str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     except ItemNotFoundInCatalogError as e:
-        logger.error("Item ", error=str(e))
+        logger.error("ROUTE /api/orders | Item ", error=str(e))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except OrderNotFoundError as e:
-        logger.error(f"Order with id: {request.item_id} not found", error=str(e))
+        logger.error(
+            f"ROUTE /api/orders | Order with id: {request.item_id} not found",
+            error=str(e),
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except Exception as e:
-        logger.exception("Order creation failed unexpectedly", error=str(e))
+        logger.exception(
+            "ROUTE /api/orders | Order creation failed unexpectedly", error=str(e)
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

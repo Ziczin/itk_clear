@@ -1,3 +1,5 @@
+import uuid
+
 from src.domain.order import Order
 from src.application.ports.uow import IUoW
 from src.utils.logger import logger
@@ -26,6 +28,7 @@ class CreateOrderUseCase:
             user_id=user_id,
             item_id=str(item_id),
             quantity=quantity,
+            idempotency_key=str(idempotency_key),
         )
 
         async with self.uow as uow:
@@ -49,7 +52,7 @@ class CreateOrderUseCase:
 
             try:
                 payment_result = await self.payment_client.create(
-                    order_id=str(item_id),
+                    order_id=str(uuid.uuid4()),  # str(item_id),
                     amount="100.00",
                     idempotency_key=str(idempotency_key),
                 )
