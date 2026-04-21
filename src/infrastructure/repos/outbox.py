@@ -1,7 +1,9 @@
+from uuid import UUID
+
 from sqlalchemy import select, update
+
 from src.application.ports.outbox_repo import IOutboxRepo
 from src.infrastructure.models.outbox import OutboxDB
-from uuid import UUID
 from src.utils.logger import logger
 
 
@@ -30,13 +32,17 @@ class OutboxRepo(IOutboxRepo):
 
     async def get_pending(self, limit=10):
         """Retrieve a limited batch of unpublished event entries."""
+        logger.info("OUTBOX REPO | Get pending events")
         result = await self.session.execute(
             select(OutboxDB).where(OutboxDB.status == "PENDING").limit(limit)
         )
+        logger.info(f"OUTBOX REPO | Got {len(result.scalars().all())} events")
+
         return result.scalars().all()
 
     async def mark_as_published(self, entry_id: UUID):
         """Update an event entry status to indicate successful delivery."""
+        logger.info("OUTBOX REPO | event marked published", entry_id=entry_id)
         await self.session.execute(
             update(OutboxDB).where(OutboxDB.id == entry_id).values(status="PUBLISHED")
         )

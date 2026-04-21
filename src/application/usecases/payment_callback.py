@@ -1,9 +1,10 @@
-from src.domain.outbox import OutboxEntry
-from src.application.ports.uow import IUoW
-from src.application.ports.order_repo import OrderNotFoundError
-from src.utils.logger import logger
-from uuid import UUID
 import asyncio
+from uuid import UUID
+
+from src.application.ports.order_repo import OrderNotFoundError
+from src.application.ports.uow import IUoW
+from src.domain.outbox import OutboxEntry
+from src.utils.logger import logger
 
 
 class PaymentCallbackUseCase:
@@ -23,7 +24,7 @@ class PaymentCallbackUseCase:
     ):
         """Process payment result and transition order state accordingly."""
         logger.info(
-            "Processing payment result",
+            "USECASE CALLBACK | Processing payment result",
             order_id=str(order_id),
             payment_status=payment_status,
             payment_id=str(payment_id),
@@ -33,7 +34,10 @@ class PaymentCallbackUseCase:
             order = await uow.orders.get(order_id=order_id)
 
             if order is None:
-                logger.error("Order not found for callback", order_id=str(order_id))
+                logger.error(
+                    "USECASE CALLBACK | Order not found for callback",
+                    order_id=str(order_id),
+                )
                 raise OrderNotFoundError()
 
             if payment_status == "succeeded":

@@ -47,11 +47,9 @@ class OutboxPublisher:
         while True:
             try:
                 async with self.uow_factory() as uow:
-                    logger.info("OUTBOX PUBLISHER | Fetching events")
                     pending_events = await uow.outbox.get_pending()
                     if not pending_events:
                         await asyncio.sleep(self.interval)
-                        logger.info("OUTBOX PUBLISHER | No events :(")
 
                         continue
 
