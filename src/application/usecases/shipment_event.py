@@ -1,9 +1,10 @@
-from src.domain.inbox import InboxEntry
-from src.application.ports.uow import IUoW
-from src.application.ports.order_repo import OrderNotFoundError
-from src.utils.logger import logger
-from uuid import UUID
 import asyncio
+from uuid import UUID, uuid4
+
+from src.application.ports.order_repo import OrderNotFoundError
+from src.application.ports.uow import IUoW
+from src.domain.inbox import InboxEntry
+from src.utils.logger import logger
 
 
 class ShipmentEventUseCase:
@@ -18,9 +19,7 @@ class ShipmentEventUseCase:
         """Consume shipment event and update order state idempotently."""
         event_type = event_data.get("event_type")
         order_id = UUID(event_data.get("order_id"))
-        idempotency_key = UUID(
-            event_data.get("idempotency_key") or event_data.get("shipment_id")
-        )
+        idempotency_key = event_data.get("idempotency_key", uuid4())
 
         logger.info(
             "Processing shipment event",

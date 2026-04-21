@@ -1,8 +1,10 @@
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-import json
 import asyncio
+import json
+
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
 from src.config import settings
-from src.utils.logger import logger
+from src.utils.logger import logger, set_request_id
 
 
 class KafkaProducerWrapper:
@@ -41,12 +43,16 @@ class OutboxPublisher:
     async def run(self):
         """Continuously process pending outbox events."""
         logger.info("Worker.OutboxPublisher started")
+        set_request_id()
         while True:
             try:
                 async with self.uow_factory() as uow:
+                    logger.info("OUTBOX PUBLISHER | Fetching events")
                     pending_events = await uow.outbox.get_pending()
                     if not pending_events:
                         await asyncio.sleep(self.interval)
+                        logger.info("OUTBOX PUBLISHER | No events :(")
+
                         continue
 
                     for event in pending_events:
@@ -100,7 +106,6 @@ class ShipmentConsumer:
                     event_data = json.loads(message.value)
                     use_case = self.uc_factory()
                     await use_case.execute(event_data=event_data)
-                    await consumer.commit()
                     logger.info(
                         "Shipment message processed",
                         partition=message.partition,
@@ -111,6 +116,7 @@ class ShipmentConsumer:
                         "Message processing failed, committing to avoid poison pill",
                         error=str(error),
                     )
+                finally:
                     await consumer.commit()
         finally:
             await consumer.stop()
