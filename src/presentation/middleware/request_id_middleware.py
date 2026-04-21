@@ -1,56 +1,37 @@
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.utils.logger import clear_request_id, set_request_id
+from src.utils.logger import clear_request_id, logger, set_request_id
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
-    """FastAPI middleware that sets a unique request ID for each incoming HTTP request."""
+    """FastAPI middleware с request ID + логированием всех входящих запросов (включая 404)"""
 
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID")
         set_request_id(request_id)
 
+        path = request.url.path
+        method = request.method
+        client = request.client.host if request.client else "unknown"
+
+        logger.info(
+            f"Incoming request | {method} {path} | client={client} | request_id={request_id}"
+        )
+
         try:
             response = await call_next(request)
+
+            logger.info(
+                f"Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
+            )
             return response
+
+        except Exception as exc:
+            logger.exception(
+                f"Request failed | {method} {path} | request_id={request_id}",
+                exc_info=exc,
+            )
+            raise
         finally:
             clear_request_id()
-
-
-"""
-import json
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
-from src.utils.logger import set_request_id, clear_request_id, get_request_id, logger
-
-
-
-
-class RequestIdMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        set_request_id(request.headers.get("X-Request-ID"))
-        try:
-            response = await call_next(request)
-            if request.url.path not in ("/logs", "/metrics"):
-                req_b = await request.body()
-                resp_b = b"".join([c async for c in response.body_iterator])
-                logger.info(
-                    f"{request.method} {request.url.path}",
-                    request_body=json.loads(req_b),
-                )
-                logger.info(
-                    f"{request.method} {request.url.path} [{response.status_code}]",
-                    response_body=json.loads(resp_b),
-                )
-                return Response(
-                    content=resp_b,
-                    status_code=response.status_code,
-                    headers=dict(response.headers),
-                    media_type=response.media_type,
-                )
-            return response
-        finally:
-            clear_request_id()
-"""

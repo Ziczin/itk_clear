@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from src.presentation.lifespan import lifespan
+from src.presentation.middleware.request_id_middleware import RequestIdMiddleware
 from src.presentation.routes.callbacks import router as callbacks_router
 from src.presentation.routes.orders import router as orders_router
 from src.utils.logs_endpoint import download_logs
@@ -12,7 +13,7 @@ app = FastAPI(
     description="Event-driven order management service with clean architecture",
 )
 
-# app.add_middleware(RequestIdMiddleware)
+app.add_middleware(RequestIdMiddleware)
 
 app.include_router(orders_router)
 app.include_router(callbacks_router)
@@ -32,6 +33,8 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True,
+        access_log=True,
+        log_level="info",
     )
 
 # run tests 6
