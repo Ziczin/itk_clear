@@ -15,23 +15,28 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         method = request.method
         client = request.client.host if request.client else "unknown"
 
-        logger.info(
-            f"Incoming request | {method} {path} | client={client} | request_id={request_id}"
-        )
+        do_log = path not in ["/metrics", "/logs"]
+
+        if do_log:
+            logger.info(
+                f"Incoming request | {method} {path} | client={client} | request_id={request_id}"
+            )
 
         try:
             response = await call_next(request)
 
-            logger.info(
-                f"Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
-            )
+            if do_log:
+                logger.info(
+                    f"Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
+                )
             return response
 
         except Exception as exc:
-            logger.exception(
-                f"Request failed | {method} {path} | request_id={request_id}",
-                exc_info=exc,
-            )
+            if do_log:
+                logger.exception(
+                    f"Request failed | {method} {path} | request_id={request_id}",
+                    exc_info=exc,
+                )
             raise
         finally:
             clear_request_id()
