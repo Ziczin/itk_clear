@@ -1,12 +1,12 @@
+import asyncio
 import uuid
+from uuid import UUID
 
-from src.domain.order import Order
 from src.application.ports.uow import IUoW
-from src.utils.logger import logger
+from src.domain.order import Order
 from src.infrastructure.clients.catalog import CatalogServiceError
 from src.infrastructure.clients.payment import PaymentServiceError
-from uuid import UUID
-import asyncio
+from src.utils.logger import logger
 
 
 class CreateOrderUseCase:
@@ -50,9 +50,10 @@ class CreateOrderUseCase:
                 logger.error("Catalog check failed", error=str(e))
                 raise
 
+            order_id = uuid.uuid4()
             try:
                 payment_result = await self.payment_client.create(
-                    order_id=str(uuid.uuid4()),  # str(item_id),
+                    order_id=str(order_id),  # str(item_id),
                     amount="100.00",
                     idempotency_key=str(idempotency_key),
                 )
@@ -61,7 +62,9 @@ class CreateOrderUseCase:
                 logger.error("Payment creation failed", error=str(e))
                 raise
 
-            order = Order(user_id=user_id, item_id=item_id, quantity=quantity)
+            order = Order(
+                id=order_id, user_id=user_id, item_id=item_id, quantity=quantity
+            )
             order.bind_payment_id(payment_id=payment_id)
 
             await uow.orders.add(order=order, idempotency_key=idempotency_key)
