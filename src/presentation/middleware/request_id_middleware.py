@@ -1,6 +1,7 @@
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from src.utils.logger import set_request_id, clear_request_id
+
+from src.utils.logger import clear_request_id, set_request_id
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
