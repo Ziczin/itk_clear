@@ -15,16 +15,10 @@ class IOutboxRepo(ABC):
     """Abstract interface for reliable outbox event storage operations."""
 
     @abstractmethod
-    async def add(self, entry: OutboxEntry):
-        """Queue a new event entry for asynchronous publishing."""
-        ...
+    async def add(self, entry: OutboxEntry) -> None: ...
 
     @abstractmethod
-    async def get_pending(self, limit: int = 10):
-        """Retrieve a limited batch of unpublished event entries."""
-        ...
+    async def get_pending(self, limit: int = 10) -> list[OutboxEntry]: ...
 
     @abstractmethod
-    async def mark_as_published(self, entry_id: UUID):
-        """Update an event entry status to indicate successful delivery."""
-        ...
+    async def mark_as_published(self, entry_id: UUID) -> None: ...

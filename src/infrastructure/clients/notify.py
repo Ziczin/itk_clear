@@ -1,3 +1,5 @@
+from typing import Any
+
 import aiohttp
 import tenacity
 
@@ -14,7 +16,7 @@ class NotificationServiceError(Exception):
 class NotifyClient:
     """HTTP client for user notification dispatch operations."""
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession) -> None:
         """Initialize client with aiohttp session."""
         self.session = session
 
@@ -24,7 +26,11 @@ class NotifyClient:
         wait=tenacity.wait_incrementing(start=1, increment=1, max=20),
     )
     async def _send_notification_safe(
-        self, url: str, payload: dict, headers: dict, reference_id: str
+        self,
+        url: str,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+        reference_id: str,
     ) -> bool:
         async with self.session.post(url, json=payload, headers=headers) as response:
             if response.status not in (200, 201):
@@ -45,13 +51,13 @@ class NotifyClient:
         """Dispatch a notification with guaranteed idempotency."""
         url = f"{settings.NOTIFICATIONS_URL}/api/notifications"
 
-        payload = {
+        payload: dict[str, Any] = {
             "message": message,
             "reference_id": reference_id,
             "idempotency_key": idempotency_key,
         }
 
-        headers = {
+        headers: dict[str, str] = {
             "X-API-Key": settings.CAPASHINO_API_KEY,
             "Content-Type": "application/json",
         }

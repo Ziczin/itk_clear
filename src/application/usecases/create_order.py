@@ -1,15 +1,14 @@
 import asyncio
 import uuid
+from typing import Any
 from uuid import UUID
 
 from src.application.ports.uow import IUoW
 from src.domain.order import Order
 from src.infrastructure.clients.catalog import CatalogClient, CatalogServiceError
-from src.infrastructure.clients.notify import NotificationServiceError, NotifyClient
+from src.infrastructure.clients.notify import NotifyClient
 from src.infrastructure.clients.payment import PaymentClient, PaymentServiceError
 from src.utils.logger import logger
-
-NotificationServiceError  # noqa
 
 
 class CreateOrderUseCase:
@@ -30,7 +29,7 @@ class CreateOrderUseCase:
 
     async def execute(
         self, user_id: str, item_id: UUID, quantity: int, idempotency_key: str
-    ):
+    ) -> Order:
         """Execute the complete order creation workflow."""
         logger.info(
             "CREATION USECASE | Initiating order creation flow",
@@ -61,22 +60,29 @@ class CreateOrderUseCase:
 
             order_id = uuid.uuid4()
             try:
-                payment_result = await self.payment_client.create(
+                payment_result: dict[str, Any] = await self.payment_client.create(
                     order_id=str(order_id),
                     amount="100.00",
                     idempotency_key=str(idempotency_key),
                 )
-                payment_id = UUID(payment_result["id"])
+                payment_id_str = payment_result.get("id")
+                if not payment_id_str:
+                    raise PaymentServiceError("Payment ID missing in response")
+
+                payment_id = UUID(payment_id_str)
             except PaymentServiceError as e:
                 logger.error("Payment creation failed", error=str(e))
                 raise
 
             order = Order(
-                id=order_id, user_id=user_id, item_id=item_id, quantity=quantity
+                id=order_id,
+                user_id=user_id,
+                item_id=item_id,
+                quantity=quantity,
+                payment_id=payment_id,
             )
-            order.bind_payment_id(payment_id=payment_id)
 
-            await uow.orders.add(order=order, idempotency_key=idempotency_key)
+            await uow.orders.add(order=order)
             await uow.commit()
 
             logger.info(
@@ -97,7 +103,7 @@ class CreateOrderUseCase:
 
     async def _send_notification_safe(
         self, message: str, reference_id: str, idempotency_key: str
-    ):
+    ) -> None:
         """Send notification without blocking the main flow."""
         try:
             await self.notification_client.send(

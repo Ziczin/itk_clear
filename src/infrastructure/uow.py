@@ -1,3 +1,8 @@
+from types import TracebackType
+from typing import Type  # Нужно только для Type[BaseException] в __aexit__
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.application.ports.uow import IUoW
 from src.infrastructure.database import async_session_maker
 from src.infrastructure.repos.inbox import InboxRepo
@@ -9,45 +14,67 @@ from src.utils.logger import logger
 class UoW(IUoW):
     """Concrete implementation managing transactional session lifecycle."""
 
-    def __init__(self):
-        self.session = None
+    def __init__(self) -> None:
+        self.session: AsyncSession | None = None
+
         self._orders = OrderRepo()
         self._outbox = OutboxRepo()
         self._inbox = InboxRepo()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "UoW":
         """Open database session and bind repositories to it."""
         self.session = async_session_maker()
+
         self._orders.session = self.session
         self._outbox.session = self.session
         self._inbox.session = self.session
+
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Close database session upon context exit."""
-        await self.session.close()
+        if self.session is None:
+            return
 
-    async def commit(self):
+        try:
+            if exc_type is not None:
+                await self.session.rollback()
+                logger.warning(
+                    "UNIT OF WORK | UoW transaction rolled back due to exception"
+                )
+            else:
+                await self.session.commit()
+                logger.debug("UNIT OF WORK | UoW transaction committed")
+        finally:
+            await self.session.close()
+
+    async def commit(self) -> None:
         """Persist all staged changes to the database."""
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Did you use 'async with'?")
         await self.session.commit()
         logger.debug("UNIT OF WORK | UoW transaction committed")
 
-    async def rollback(self):
+    async def rollback(self) -> None:
         """Revert all staged changes in the current session."""
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Did you use 'async with'?")
         await self.session.rollback()
         logger.warning("UNIT OF WORK | UoW transaction rolled back")
 
     @property
-    def orders(self):
-        """Expose the order repository instance."""
+    def orders(self) -> OrderRepo:
         return self._orders
 
     @property
-    def outbox(self):
-        """Expose the outbox repository instance."""
+    def outbox(self) -> OutboxRepo:
         return self._outbox
 
     @property
-    def inbox(self):
-        """Expose the inbox repository instance."""
+    def inbox(self) -> InboxRepo:
         return self._inbox

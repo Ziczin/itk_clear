@@ -7,6 +7,7 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from loguru import Message
 from loguru import logger as _loguru_logger
 
 _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
@@ -40,7 +41,7 @@ def clear_logs_jsonl() -> None:
     _logs_jsonl.clear()
 
 
-def json_sink(message):
+def json_sink(message: Message):
     record = message.record
     project_root = os.getcwd()
     try:
@@ -50,9 +51,9 @@ def json_sink(message):
             f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
         )
     except (ValueError, KeyError):
-        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"
+        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"  # pyright: ignore
 
-    log_entry = {
+    log_entry = {  # pyright: ignore
         "time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "level": record["level"].name,
         "place": place_str,
@@ -63,17 +64,17 @@ def json_sink(message):
     extra_data = record.get("extra", {})
     for key, value in extra_data.items():
         if not key.startswith("_"):
-            log_entry["data"]["extra"][key] = value
+            log_entry["data"]["extra"][key] = value  # pyright: ignore
 
     if record.get("exception"):
-        log_entry["data"]["extra"]["exception"] = record["exception"]
+        log_entry["data"]["extra"]["exception"] = record["exception"]  # pyright: ignore
 
     sys.stderr.write(
         json.dumps(log_entry, ensure_ascii=False, indent=2, default=str) + "\n"
     )
 
 
-def memory_jsonl_sink(message):
+def memory_jsonl_sink(message: Message):
     """Формирует компактный JSON и добавляет его в список _logs_jsonl (как строку JSONL)."""
     record = message.record
     project_root = os.getcwd()
@@ -84,9 +85,9 @@ def memory_jsonl_sink(message):
             f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
         )
     except (ValueError, KeyError):
-        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"
+        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"  # pyright: ignore
 
-    log_entry = {
+    log_entry = {  # pyright: ignore
         "time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "level": record["level"].name,
         "place": place_str,
@@ -97,10 +98,10 @@ def memory_jsonl_sink(message):
     extra_data = record.get("extra", {})
     for key, value in extra_data.items():
         if not key.startswith("_"):
-            log_entry["data"]["extra"][key] = value
+            log_entry["data"]["extra"][key] = value  # pyright: ignore
 
     if record.get("exception"):
-        log_entry["data"]["extra"]["exception"] = record["exception"]
+        log_entry["data"]["extra"]["exception"] = record["exception"]  # pyright: ignore
 
     json_line = json.dumps(log_entry, ensure_ascii=False, default=str)
     _logs_jsonl.append(json_line)

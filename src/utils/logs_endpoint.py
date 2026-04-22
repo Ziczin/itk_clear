@@ -1,10 +1,13 @@
+from typing import Any
+
 from fastapi import Response
 
 from src.utils.logger import get_logs_jsonl
 
 
-async def download_logs(*args):
+async def download_logs(*args: list[Any]):
 
+    args = args  # noqa
     logs = get_logs_jsonl()
     content = "\n".join(logs)
     if content and not content.endswith("\n"):

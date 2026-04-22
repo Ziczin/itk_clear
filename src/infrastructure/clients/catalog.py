@@ -1,3 +1,5 @@
+from typing import Any
+
 import aiohttp
 
 from src.config import settings
@@ -19,11 +21,11 @@ class ItemNotFoundInCatalogError(Exception):
 class CatalogClient:
     """HTTP client for external catalog service integration."""
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession) -> None:
         """Initialize client with aiohttp session."""
         self.session = session
 
-    async def check_stock(self, item_id: str, quantity: int) -> dict:
+    async def check_stock(self, item_id: str, quantity: int) -> dict[str, Any]:
         """Verify item availability against external inventory API."""
         url = f"{settings.CATALOG_URL}/api/catalog/items/{item_id}"
         headers = {"X-API-Key": settings.CAPASHINO_API_KEY}
@@ -49,7 +51,7 @@ class CatalogClient:
                     f"Catalog API error: {response.status} - {response_text}"
                 )
 
-            data = await response.json()
+            data: dict[str, Any] = await response.json()
             available_qty = data.get("available_qty", 0)
 
             logger.info(

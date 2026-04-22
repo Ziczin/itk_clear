@@ -1,6 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Any, Optional
+
 from pydantic import HttpUrl, field_validator
-from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Config(BaseSettings):
@@ -12,21 +13,20 @@ class Config(BaseSettings):
     POSTGRES_USERNAME: str
     POSTGRES_PASSWORD: str
 
-    DATABASE_URL: Optional[str] = None
+    DATABASE_URL: str
 
     KAFKA_BOOTSTRAP_SERVERS: str
 
     CAPASHINO_API_KEY: str
 
-    CATALOG_URL: HttpUrl
+    _CATALOG_URL: HttpUrl
+    _PAYMENTS_URL: HttpUrl
+    _NOTIFICATIONS_URL: HttpUrl
+    _PAYMENTS_CALLBACK_URL: HttpUrl
 
-    PAYMENTS_URL: HttpUrl
     PAYMENTS_RETRY_LIMIT: int = 5
     PAYMENTS_START_TIMEOUT: float = 1.0
     PAYMENTS_MAX_TIMEOUT: float = 10.0
-    PAYMENTS_CALLBACK_URL: HttpUrl
-
-    NOTIFICATIONS_URL: HttpUrl
 
     SENTRY_DSN: Optional[str] = None
 
@@ -34,7 +34,7 @@ class Config(BaseSettings):
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
-    def build_database_url(cls, v: Optional[str], info) -> str:
+    def build_database_url(cls, v: str | None, info: Any) -> str:
         """Build DATABASE_URL from individual PostgreSQL parameters if not provided."""
         if v:
             return v
@@ -46,12 +46,21 @@ class Config(BaseSettings):
             f"{data['POSTGRES_DATABASE_NAME']}"
         )
 
-    def model_post_init(self, __context):
-        # Приводим HttpUrl к строке и обрезаем завершающий слэш, если он есть
-        self.CATALOG_URL = str(self.CATALOG_URL).rstrip("/")
-        self.PAYMENTS_URL = str(self.PAYMENTS_URL).rstrip("/")
-        self.NOTIFICATIONS_URL = str(self.NOTIFICATIONS_URL).rstrip("/")
-        self.PAYMENTS_CALLBACK_URL = str(self.PAYMENTS_CALLBACK_URL).rstrip("/")
+    @property
+    def CATALOG_URL(self) -> str:
+        return str(self._CATALOG_URL).rstrip("/")
+
+    @property
+    def PAYMENTS_URL(self) -> str:
+        return str(self._PAYMENTS_URL).rstrip("/")
+
+    @property
+    def NOTIFICATIONS_URL(self) -> str:
+        return str(self._NOTIFICATIONS_URL).rstrip("/")
+
+    @property
+    def PAYMENTS_CALLBACK_URL(self) -> str:
+        return str(self._PAYMENTS_CALLBACK_URL).rstrip("/")
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
@@ -67,4 +76,4 @@ class Config(BaseSettings):
         )
 
 
-settings = Config()
+settings = Config()  # type: ignore[reportCallIssue]

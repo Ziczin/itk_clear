@@ -18,24 +18,24 @@ class OrderDuplicateError(BaseAppError):
 
 
 class IOrderRepo(ABC):
-    """Abstract interface defining order persistence operations."""
+    """Abstract interface for order persistence operations."""
 
     @abstractmethod
-    async def add(self, order: Order, idempotency_key: str):
-        """Insert a new order entity into the data store."""
+    async def add(self, order: Order) -> None:
+        """Stage an order for insertion."""
         ...
 
     @abstractmethod
-    async def get(self, order_id: UUID):
-        """Retrieve an order entity by its primary key identifier."""
+    async def get(self, order_id: UUID) -> Order | None:
+        """Retrieve an order by its ID."""
         ...
 
     @abstractmethod
-    async def update(self, order: Order):
-        """Apply state changes to an existing order record."""
+    async def get_by_idempotency_key(self, key: str) -> Order | None:
+        """Retrieve an order by its idempotency key."""
         ...
 
     @abstractmethod
-    async def get_by_idempotency_key(self, idempotency_key: str):
-        """Locate an order using its idempotency constraint key."""
+    async def update(self, order: Order) -> None:
+        """Update an existing order."""
         ...

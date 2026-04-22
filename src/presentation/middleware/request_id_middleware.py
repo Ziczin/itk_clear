@@ -1,5 +1,8 @@
 from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import (
+    Response,
+)
 
 from src.utils.logger import clear_request_id, logger, set_request_id
 
@@ -7,7 +10,11 @@ from src.utils.logger import clear_request_id, logger, set_request_id
 class RequestIdMiddleware(BaseHTTPMiddleware):
     """FastAPI middleware с request ID + логированием всех входящих запросов (включая 404)"""
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: RequestResponseEndpoint,
+    ) -> Response:
         request_id = request.headers.get("X-Request-ID")
         set_request_id(request_id)
 

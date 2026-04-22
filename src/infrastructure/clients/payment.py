@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from typing import Any
 
 import aiohttp
 from aiohttp import TraceConfig
@@ -15,17 +16,21 @@ class PaymentServiceError(Exception):
     ...
 
 
-def setup_trace_config(order_id) -> TraceConfig:
+def setup_trace_config(order_id: str) -> TraceConfig:
     """Trace config для отслеживания попыток ретрая"""
     trace_config = TraceConfig()
 
-    async def on_request_start(session, ctx, params):
+    async def on_request_start(
+        session: aiohttp.ClientSession, ctx: Any, params: Any
+    ) -> None:
         attempt = ctx.trace_request_ctx.get("current_attempt", 0) + 1
         logger.debug(
             "PAYMENT CLIENT | Payment attempt", attempt=attempt, order_id=order_id
         )
 
-    async def on_request_exception(session, ctx, params):
+    async def on_request_exception(
+        session: aiohttp.ClientSession, ctx: Any, params: Any
+    ) -> None:
         attempt = ctx.trace_request_ctx.get("current_attempt", 0) + 1
         logger.warning(
             "PAYMENT CLIENT | Payment attempt failed",
@@ -57,10 +62,17 @@ def setup_retry_options() -> ExponentialRetry:
 
 @asynccontextmanager
 async def post_to_payment_service(
-    *, session, url, payload, headers, trace_config, retry_options
+    *,
+    session: aiohttp.ClientSession,
+    url: str,
+    payload: dict[str, Any],
+    headers: dict[str, str],
+    trace_config: TraceConfig,
+    retry_options: ExponentialRetry,
 ):
-    session  # noqa
-    async with RetryClient(trace_configs=[trace_config]) as retry_client:
+    async with RetryClient(
+        client_session=session, trace_configs=[trace_config]
+    ) as retry_client:
         async with retry_client.post(
             url,
             json=payload,
@@ -74,23 +86,25 @@ async def post_to_payment_service(
 class PaymentClient:
     """HTTP client for payment gateway communication."""
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession) -> None:
         """Initialize client with aiohttp session."""
         self.session = session
 
-    async def create(self, order_id: str, amount: str, idempotency_key: str) -> dict:
+    async def create(
+        self, order_id: str, amount: str, idempotency_key: str
+    ) -> dict[str, Any]:
         """Initialize a payment session with the external provider."""
         callback_url = settings.PAYMENTS_CALLBACK_URL
         url = f"{settings.PAYMENTS_URL}/api/payments"
 
-        payload = {
+        payload: dict[str, Any] = {
             "order_id": order_id,
             "amount": amount,
             "callback_url": str(callback_url),
             "idempotency_key": idempotency_key,
         }
 
-        headers = {
+        headers: dict[str, str] = {
             "X-API-Key": settings.CAPASHINO_API_KEY,
             "Content-Type": "application/json",
         }
@@ -126,7 +140,7 @@ class PaymentClient:
                     f"PAYMENT CLIENT | Payment API error: {response.status} - {response_text}"
                 )
 
-            result = await response.json()
+            result: dict[str, Any] = await response.json()
             logger.info(
                 "PAYMENT CLIENT | Payment created",
                 payment_id=result.get("id"),

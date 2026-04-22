@@ -4,13 +4,14 @@ from uuid import UUID
 from src.application.ports.order_repo import OrderNotFoundError
 from src.application.ports.uow import IUoW
 from src.domain.outbox import OutboxEntry
+from src.infrastructure.clients.notify import NotifyClient
 from src.utils.logger import logger
 
 
 class PaymentCallbackUseCase:
     """Application service handling external payment gateway responses."""
 
-    def __init__(self, uow: IUoW, notification_client):
+    def __init__(self, uow: IUoW, notification_client: NotifyClient):
         """Inject transactional unit and notification dependencies."""
         self.uow = uow
         self.notification_client = notification_client
@@ -21,7 +22,7 @@ class PaymentCallbackUseCase:
         payment_status: str,
         payment_id: UUID,
         idempotency_key: str,
-    ):
+    ) -> None:
         """Process payment result and transition order state accordingly."""
         logger.info(
             "CALLBACK USECASE | Processing payment result",
@@ -76,14 +77,14 @@ class PaymentCallbackUseCase:
 
                 logger.warning(
                     "USECASE CALLBACK | Order cancelled due to payment failure",
-                    order_id=str(order.id),
+                    order_id=str(order_id),
                     reason=reason,
                 )
 
                 asyncio.create_task(
                     self._send_notification_safe(
                         message=f"Ваш заказ отменен. Причина: {reason}",
-                        reference_id=str(order.id),
+                        reference_id=str(order_id),
                         idempotency_key=str(idempotency_key),
                     )
                 )
@@ -99,7 +100,7 @@ class PaymentCallbackUseCase:
 
     async def _send_notification_safe(
         self, message: str, reference_id: str, idempotency_key: str
-    ):
+    ) -> None:
         """Send notification without blocking the main flow."""
         try:
             await self.notification_client.send(

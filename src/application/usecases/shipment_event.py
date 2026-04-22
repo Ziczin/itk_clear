@@ -1,24 +1,32 @@
 import asyncio
+from typing import Any
 from uuid import UUID, uuid4
 
 from src.application.ports.order_repo import OrderNotFoundError
 from src.application.ports.uow import IUoW
 from src.domain.inbox import InboxEntry
+from src.infrastructure.clients.notify import NotifyClient
 from src.utils.logger import logger
 
 
 class ShipmentEventUseCase:
     """Application service for processing shipping service Kafka events."""
 
-    def __init__(self, uow: IUoW, notification_client):
+    def __init__(self, uow: IUoW, notification_client: NotifyClient):
         """Inject transactional unit and notification dependencies."""
         self.uow = uow
         self.notification_client = notification_client
 
-    async def execute(self, event_data: dict):
+    async def execute(self, event_data: dict[str, Any]) -> None:
         """Consume shipment event and update order state idempotently."""
         event_type = event_data.get("event_type")
-        order_id = UUID(event_data.get("order_id"))
+
+        order_id_raw = event_data.get("order_id")
+        if not order_id_raw:
+            logger.error("SHIPMENT EVENT | Missing order_id in event")
+            return
+
+        order_id = UUID(order_id_raw)
         idempotency_key = str(event_data.get("idempotency_key", uuid4()))
 
         logger.info(
@@ -29,7 +37,8 @@ class ShipmentEventUseCase:
         )
 
         async with self.uow as uow:
-            if await uow.inbox.exists(idempotency_key=idempotency_key):
+            existing = await uow.inbox.get_by_idempotency_key(idempotency_key)
+            if existing is not None:
                 logger.warning(
                     "SHIPMENT EVENT | Duplicate event skipped (already processed)",
                     event_key=str(idempotency_key),
@@ -43,6 +52,8 @@ class ShipmentEventUseCase:
                     "Order not found for shipment event", order_id=str(order_id)
                 )
                 raise OrderNotFoundError()
+
+            notification_message = ""
 
             if event_type == "order.shipped":
                 order.transition_to_shipped()
@@ -80,7 +91,7 @@ class ShipmentEventUseCase:
 
     async def _send_notification_safe(
         self, message: str, reference_id: str, idempotency_key: str
-    ):
+    ) -> None:
         """Send notification without blocking the main flow."""
         try:
             await self.notification_client.send(
