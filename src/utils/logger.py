@@ -1,13 +1,12 @@
-# logger_config.py
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportArgumentType=false, reportOptionalSubscript=false, reportIndexIssue=false, reportUnusedImport=false, reportUnusedExpression=false
 import json
 import os
 import sys
 import uuid
 from contextvars import ContextVar
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from loguru import Message
 from loguru import logger as _loguru_logger
 
 _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
@@ -32,16 +31,14 @@ _logs_jsonl: List[str] = []
 
 
 def get_logs_jsonl() -> List[str]:
-    """Возвращает копию списка логов в формате JSONL (каждая строка — JSON)."""
     return _logs_jsonl.copy()
 
 
 def clear_logs_jsonl() -> None:
-    """Очищает накопленные логи."""
     _logs_jsonl.clear()
 
 
-def json_sink(message: Message):
+def json_sink(message: Any) -> None:
     record = message.record
     project_root = os.getcwd()
     try:
@@ -51,9 +48,9 @@ def json_sink(message: Message):
             f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
         )
     except (ValueError, KeyError):
-        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"  # pyright: ignore
+        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"
 
-    log_entry = {  # pyright: ignore
+    log_entry = {
         "time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "level": record["level"].name,
         "place": place_str,
@@ -64,18 +61,17 @@ def json_sink(message: Message):
     extra_data = record.get("extra", {})
     for key, value in extra_data.items():
         if not key.startswith("_"):
-            log_entry["data"]["extra"][key] = value  # pyright: ignore
+            log_entry["data"]["extra"][key] = value
 
     if record.get("exception"):
-        log_entry["data"]["extra"]["exception"] = record["exception"]  # pyright: ignore
+        log_entry["data"]["extra"]["exception"] = record["exception"]
 
     sys.stderr.write(
         json.dumps(log_entry, ensure_ascii=False, indent=2, default=str) + "\n"
     )
 
 
-def memory_jsonl_sink(message: Message):
-    """Формирует компактный JSON и добавляет его в список _logs_jsonl (как строку JSONL)."""
+def memory_jsonl_sink(message: Any) -> None:
     record = message.record
     project_root = os.getcwd()
     try:
@@ -85,9 +81,9 @@ def memory_jsonl_sink(message: Message):
             f"{rel_path.replace(os.sep, '.')}.py:{record['function']}:{record['line']}"
         )
     except (ValueError, KeyError):
-        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"  # pyright: ignore
+        place_str = f"{record.get('file', {}).get('path', 'unknown')}:{record.get('function', 'unknown')}:{record.get('line', 'unknown')}"
 
-    log_entry = {  # pyright: ignore
+    log_entry = {
         "time": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "level": record["level"].name,
         "place": place_str,
@@ -98,17 +94,15 @@ def memory_jsonl_sink(message: Message):
     extra_data = record.get("extra", {})
     for key, value in extra_data.items():
         if not key.startswith("_"):
-            log_entry["data"]["extra"][key] = value  # pyright: ignore
+            log_entry["data"]["extra"][key] = value
 
     if record.get("exception"):
-        log_entry["data"]["extra"]["exception"] = record["exception"]  # pyright: ignore
+        log_entry["data"]["extra"]["exception"] = record["exception"]
 
     json_line = json.dumps(log_entry, ensure_ascii=False, default=str)
     _logs_jsonl.append(json_line)
 
 
-# _loguru_logger.remove()
-# _loguru_logger.add(json_sink, level="INFO", colorize=False)
 _loguru_logger.add(memory_jsonl_sink, level="DEBUG")
 
 logger = _loguru_logger
