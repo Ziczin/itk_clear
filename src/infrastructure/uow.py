@@ -49,7 +49,6 @@ class UoW(IUoW):
                 )
             else:
                 await self.session.commit()
-                logger.debug("UNIT OF WORK | UoW transaction committed")
         finally:
             await self.session.close()
 
@@ -58,7 +57,6 @@ class UoW(IUoW):
         if self.session is None:
             raise RuntimeError("Session is not initialized. Did you use 'async with'?")
         await self.session.commit()
-        logger.debug("UNIT OF WORK | UoW transaction committed")
 
     async def rollback(self) -> None:
         """Revert all staged changes in the current session."""
