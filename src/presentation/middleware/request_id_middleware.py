@@ -20,7 +20,6 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path
         method = request.method
-        client = request.client.host if request.client else "unknown"
 
         do_log = path not in ["/metrics", "/logs", "/openapi.json"]
 
