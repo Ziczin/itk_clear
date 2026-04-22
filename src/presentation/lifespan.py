@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import aiohttp
 from fastapi import FastAPI
 
+from src.config import settings
 from src.infrastructure.bootstrap.background import start_background_workers
 from src.infrastructure.bootstrap.database import apply_migrations
 from src.infrastructure.bootstrap.kafka import initialize_kafka_producer
@@ -14,7 +15,7 @@ from src.utils.logger import logger
 async def lifespan(application: FastAPI):
     """Coordinate application startup sequence and graceful shutdown procedures."""
     logger.info("LIFESPAN | Initializing application components")
-
+    logger.warning(str(settings.CAPASHINO_API_KEY))
     try:
         await initialize_sentry_monitoring()
 

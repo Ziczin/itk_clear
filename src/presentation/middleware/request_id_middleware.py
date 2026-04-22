@@ -25,9 +25,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         do_log = path not in ["/metrics", "/logs", "/openapi.json"]
 
         if do_log:
-            logger.info(
-                f"MIDDLEWARE | Incoming request | {method} {path} | client={client} | request_id={request_id}"
-            )
+            logger.info(f"MIDDLEWARE | Incoming request | {method} {path}")
 
         try:
             response = await call_next(request)
