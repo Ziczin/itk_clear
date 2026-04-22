@@ -1,7 +1,13 @@
-from sqlalchemy import Column, String, DateTime, Integer
+from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
 from src.infrastructure.database import Base
-from datetime import datetime
+
+
+def utc_datettime() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class OrderDB(Base):
@@ -15,5 +21,5 @@ class OrderDB(Base):
     status = Column(String)
     payment_id = Column(PG_UUID(as_uuid=True), nullable=True)
     idempotency_key = Column(String, unique=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_datettime)
+    updated_at = Column(DateTime, default=utc_datettime)

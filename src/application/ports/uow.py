@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Self
 
 from src.application.ports.inbox_repo import IInboxRepo
 from src.application.ports.order_repo import IOrderRepo
@@ -25,34 +26,33 @@ class IUoW(ABC):
     @abstractmethod
     def orders(self) -> IOrderRepo:
         """Provide access to the order repository instance."""
-        pass
+        ...
 
     @property
     @abstractmethod
     def outbox(self) -> IOutboxRepo:
         """Provide access to the outbox repository instance."""
-        pass
+        ...
 
     @property
     @abstractmethod
     def inbox(self) -> IInboxRepo:
         """Provide access to the inbox repository instance."""
-        pass
+        ...
 
     @abstractmethod
-    async def commit(self):
-        """Persist all staged transactional changes to the database."""
-        pass
+    async def commit(self) -> None: ...
 
     @abstractmethod
-    async def rollback(self):
-        """Revert all staged transactional changes in the current session."""
-        pass
+    async def rollback(self) -> None: ...
 
     @abstractmethod
-    async def __aenter__(self):
-        pass
+    async def __aenter__(self) -> Self: ...
 
     @abstractmethod
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
+    ) -> None: ...

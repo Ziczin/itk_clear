@@ -1,4 +1,5 @@
 import aiohttp
+
 from src.config import settings
 from src.utils.logger import logger
 
@@ -6,13 +7,13 @@ from src.utils.logger import logger
 class CatalogServiceError(Exception):
     """Raised when catalog service returns an error."""
 
-    pass
+    ...
 
 
 class ItemNotFoundInCatalogError(Exception):
     """Raised when catalog service returns 404 code."""
 
-    pass
+    ...
 
 
 class CatalogClient:

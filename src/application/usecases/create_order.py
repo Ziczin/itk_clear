@@ -45,7 +45,7 @@ class CreateOrderUseCase:
 
             if existing_order:
                 logger.warning(
-                    "Duplicate request detected",
+                    "USECASE CREATION | Duplicate request detected",
                     order_id=existing_order.id,
                     idempotency_key=idempotency_key,
                 )

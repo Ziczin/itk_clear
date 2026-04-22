@@ -132,10 +132,10 @@ async def get_order(
     try:
         order = await use_case.execute(order_id=order_id)
 
-        logger.info(
-            "ROUTE ORDER CREATION | Order retrieved successfully", status=order.status
+        logger.debug(
+            r"ROUTE ORDER GETTING | Route /api/orders/{order_id} returns 200",
+            status=order.status,
         )
-        logger.debug(r"ROUTE ORDER CREATION | Route /api/orders/{order_id} returns 200")
 
         return OrderResponse(
             id=order.id,
@@ -148,10 +148,11 @@ async def get_order(
         )
 
     except OrderNotFoundError as e:
-        logger.warning("CALLBACK ROUTE | Order not found", order_id=str(order_id))
+        logger.warning("ROUTE ORDER GETTING | Order not found", order_id=str(order_id))
 
         logger.debug(
-            r"CALLBACK ROUTE | Route /api/orders/{order_id} returns 404", error=str(e)
+            r"ROUTE ORDER GETTING | Route /api/orders/{order_id} returns 404",
+            error=str(e),
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -159,8 +160,8 @@ async def get_order(
         )
 
     except Exception as e:
-        logger.exception("CALLBACK ROUTE | Order retrieval failed", error=str(e))
-        logger.debug(r"CALLBACK ROUTE | Route /api/orders/{order_id} returns 500")
+        logger.exception("ROUTE ORDER GETTING | Order retrieval failed", error=str(e))
+        logger.debug(r"ROUTE ORDER GETTING | Route /api/orders/{order_id} returns 500")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

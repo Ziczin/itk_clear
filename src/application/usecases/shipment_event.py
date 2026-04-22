@@ -31,7 +31,7 @@ class ShipmentEventUseCase:
         async with self.uow as uow:
             if await uow.inbox.exists(idempotency_key=idempotency_key):
                 logger.warning(
-                    "Duplicate event skipped (already processed)",
+                    "SHIPMENT EVENT | Duplicate event skipped (already processed)",
                     event_key=str(idempotency_key),
                 )
                 return
@@ -54,7 +54,10 @@ class ShipmentEventUseCase:
                 notification_message = f"Ваш заказ отменен. Причина: {reason}"
 
             else:
-                logger.warning("Unknown shipment event type", event_type=event_type)
+                logger.warning(
+                    "SHIPMENT EVENT | Unknown shipment event type",
+                    event_type=event_type,
+                )
                 return
 
             await uow.inbox.add(entry=InboxEntry(idempotency_key=idempotency_key))

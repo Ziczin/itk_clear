@@ -1,4 +1,8 @@
 import asyncio
+from typing import Callable
+
+from aiohttp.client import ClientSession
+from fastapi import FastAPI
 
 from src.application.usecases.shipment_event import ShipmentEventUseCase
 from src.infrastructure.clients.notify import NotifyClient
@@ -7,10 +11,12 @@ from src.infrastructure.uow import UoW
 from src.utils.logger import logger
 
 
-def _build_shipment_use_case_factory(http_session):
+def _build_shipment_use_case_factory(
+    http_session: ClientSession,
+) -> Callable[[], ShipmentEventUseCase]:
     """Create a factory function for instantiating shipment event use cases."""
 
-    def factory():
+    def factory() -> ShipmentEventUseCase:
         return ShipmentEventUseCase(
             uow=UoW(), notification_client=NotifyClient(session=http_session)
         )
@@ -18,7 +24,7 @@ def _build_shipment_use_case_factory(http_session):
     return factory
 
 
-async def start_background_workers(application, http_session):
+async def start_background_workers(application: FastAPI, http_session: ClientSession):
     """Launch outbox publisher and shipment consumer as background tasks."""
     logger.info("WORKER BOOTSTRAP | Starting background workers")
     outbox_publisher = OutboxPublisher(

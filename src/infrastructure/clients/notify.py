@@ -8,7 +8,7 @@ from src.utils.logger import logger
 class NotificationServiceError(Exception):
     """Raised when notification service returns an error."""
 
-    pass
+    ...
 
 
 class NotifyClient:

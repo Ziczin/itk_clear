@@ -35,7 +35,7 @@ class UoW(IUoW):
     async def rollback(self):
         """Revert all staged changes in the current session."""
         await self.session.rollback()
-        logger.warning("UoW transaction rolled back")
+        logger.warning("UNIT OF WORK | UoW transaction rolled back")
 
     @property
     def orders(self):

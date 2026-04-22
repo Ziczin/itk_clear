@@ -36,5 +36,3 @@ if __name__ == "__main__":
         access_log=True,
         log_level="info",
     )
-
-# run tests 6

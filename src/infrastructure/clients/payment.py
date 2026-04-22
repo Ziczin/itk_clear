@@ -1,16 +1,18 @@
 import asyncio
+from contextlib import asynccontextmanager
+
 import aiohttp
-from aiohttp_retry import RetryClient, ExponentialRetry
+from aiohttp import TraceConfig
+from aiohttp_retry import ExponentialRetry, RetryClient
+
 from src.config import settings
 from src.utils.logger import logger
-from aiohttp import TraceConfig
-from contextlib import asynccontextmanager
 
 
 class PaymentServiceError(Exception):
     """Raised when payment service returns an error."""
 
-    pass
+    ...
 
 
 def setup_trace_config(order_id) -> TraceConfig:

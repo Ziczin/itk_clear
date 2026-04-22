@@ -1,17 +1,14 @@
-# main.py
 from fastapi import Response
-from src.utils.logger import get_logs_jsonl, clear_logs_jsonl
+
+from src.utils.logger import get_logs_jsonl
 
 
-async def download_logs(clear: bool = False):
+async def download_logs(*args):
 
     logs = get_logs_jsonl()
     content = "\n".join(logs)
     if content and not content.endswith("\n"):
         content += "\n"
-
-    if clear:
-        clear_logs_jsonl()
 
     return Response(
         content=content,
