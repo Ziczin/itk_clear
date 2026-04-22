@@ -19,7 +19,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
         if do_log:
             logger.info(
-                f"Incoming request | {method} {path} | client={client} | request_id={request_id}"
+                f"MIDDLEWARE | Incoming request | {method} {path} | client={client} | request_id={request_id}"
             )
 
         try:
@@ -27,7 +27,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
             if do_log:
                 logger.info(
-                    f"Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
+                    f"MIDDLEWARE | Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
                 )
             return response
 

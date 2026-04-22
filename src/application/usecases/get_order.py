@@ -14,12 +14,14 @@ class GetOrderUseCase:
 
     async def execute(self, order_id: UUID):
         """Fetch and return a domain order entity by identifier."""
-        logger.info("Fetching order details", order_id=str(order_id))
+        logger.info("GETTING USECASE | Fetching order details", order_id=str(order_id))
 
         async with self.uow as uow:
             order = await uow.orders.get(order_id=order_id)
             if order is None:
                 raise OrderNotFoundError()
 
-            logger.info("Order retrieved successfully", status=order.status)
+            logger.info(
+                "GETTING USECASE | Order retrieved successfully", status=order.status
+            )
             return order

@@ -19,13 +19,13 @@ class ShipmentEventUseCase:
         """Consume shipment event and update order state idempotently."""
         event_type = event_data.get("event_type")
         order_id = UUID(event_data.get("order_id"))
-        idempotency_key = event_data.get("idempotency_key", uuid4())
+        idempotency_key = str(event_data.get("idempotency_key", uuid4()))
 
         logger.info(
-            "Processing shipment event",
+            "SHIPMENT USECASE | Processing shipment event",
             event_type=event_type,
             order_id=str(order_id),
-            idempotency_key=str(idempotency_key),
+            idempotency_key=idempotency_key,
         )
 
         async with self.uow as uow:
@@ -62,7 +62,7 @@ class ShipmentEventUseCase:
             await uow.commit()
 
             logger.info(
-                "Shipment event processed and committed",
+                "SHIPMENT USECASE | Shipment event processed and committed",
                 order_id=str(order.id),
                 new_status=order.status,
             )

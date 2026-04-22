@@ -24,7 +24,7 @@ class PaymentCallbackUseCase:
     ):
         """Process payment result and transition order state accordingly."""
         logger.info(
-            "USECASE CALLBACK | Processing payment result",
+            "CALLBACK USECASE | Processing payment result",
             order_id=str(order_id),
             payment_status=payment_status,
             payment_id=str(payment_id),
@@ -58,7 +58,7 @@ class PaymentCallbackUseCase:
                 await uow.outbox.add(entry=event)
 
                 logger.info(
-                    "Order marked paid and outbox record created",
+                    "CALLBACK USECASE | Order marked paid and outbox record created",
                     order_id=str(order.id),
                 )
 
@@ -75,7 +75,7 @@ class PaymentCallbackUseCase:
                 reason = "Payment failed"
 
                 logger.warning(
-                    "Order cancelled due to payment failure",
+                    "USECASE CALLBACK | Order cancelled due to payment failure",
                     order_id=str(order.id),
                     reason=reason,
                 )
@@ -92,7 +92,7 @@ class PaymentCallbackUseCase:
             await uow.commit()
 
             logger.info(
-                "Callback processing completed",
+                "CALLBACK USECASE | Callback processing completed",
                 order_id=str(order_id),
                 new_status=order.status,
             )
@@ -109,7 +109,7 @@ class PaymentCallbackUseCase:
             )
         except Exception as e:
             logger.error(
-                "Failed to send notification (non-blocking)",
+                "USECASE CALLBACK | Failed to send notification (non-blocking)",
                 error=str(e),
                 reference_id=reference_id,
             )

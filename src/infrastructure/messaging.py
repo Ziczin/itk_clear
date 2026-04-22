@@ -42,7 +42,7 @@ class OutboxPublisher:
 
     async def run(self):
         """Continuously process pending outbox events."""
-        logger.info("Worker.OutboxPublisher started")
+        logger.info("MESSAGING | OutboxPublisher started")
         set_request_id()
         while True:
             try:
@@ -63,7 +63,7 @@ class OutboxPublisher:
                             await uow.outbox.mark_as_published(entry_id=event.id)
                             await uow.commit()
                             logger.info(
-                                "Outbox event published",
+                                "MESSAGING | Outbox event published",
                                 event_id=str(event.id),
                                 topic="order.events",
                             )
@@ -90,7 +90,7 @@ class ShipmentConsumer:
 
     async def run(self, cancel_event: asyncio.Event):
         """Continuously read shipment messages and delegate to use case."""
-        logger.info("Worker.ShipmentConsumer started")
+        logger.info("KAFKA | ShipmentConsumer started")
         consumer = AIOKafkaConsumer(
             "student_system-shipment.events",
             bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
@@ -105,7 +105,7 @@ class ShipmentConsumer:
                     use_case = self.uc_factory()
                     await use_case.execute(event_data=event_data)
                     logger.info(
-                        "Shipment message processed",
+                        "KAFKA | Shipment message processed",
                         partition=message.partition,
                         offset=message.offset,
                     )

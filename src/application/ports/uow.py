@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
+from src.application.ports.inbox_repo import IInboxRepo
 from src.application.ports.order_repo import IOrderRepo
 from src.application.ports.outbox_repo import IOutboxRepo
-from src.application.ports.inbox_repo import IInboxRepo
 from src.utils.exceptions import BaseAppError
 
 
@@ -47,4 +47,12 @@ class IUoW(ABC):
     @abstractmethod
     async def rollback(self):
         """Revert all staged transactional changes in the current session."""
+        pass
+
+    @abstractmethod
+    async def __aenter__(self):
+        pass
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass

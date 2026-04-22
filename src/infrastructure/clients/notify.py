@@ -1,7 +1,8 @@
 import aiohttp
+import tenacity
+
 from src.config import settings
 from src.utils.logger import logger
-import tenacity
 
 
 class NotificationServiceError(Exception):
@@ -80,9 +81,10 @@ class NotifyClient:
                 reference_id=reference_id,
             )
             return False
-        except Exception:
+        except Exception as e:
             logger.exception(
                 "NOTIFY CLIENT | Notification sending failed unexpectedly",
                 reference_id=reference_id,
+                error=str(e),
             )
             return False

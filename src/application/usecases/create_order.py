@@ -4,15 +4,24 @@ from uuid import UUID
 
 from src.application.ports.uow import IUoW
 from src.domain.order import Order
-from src.infrastructure.clients.catalog import CatalogServiceError
-from src.infrastructure.clients.payment import PaymentServiceError
+from src.infrastructure.clients.catalog import CatalogClient, CatalogServiceError
+from src.infrastructure.clients.notify import NotificationServiceError, NotifyClient
+from src.infrastructure.clients.payment import PaymentClient, PaymentServiceError
 from src.utils.logger import logger
+
+NotificationServiceError  # noqa
 
 
 class CreateOrderUseCase:
     """Application service orchestrating order creation with validation."""
 
-    def __init__(self, uow: IUoW, catalog_client, payment_client, notification_client):
+    def __init__(
+        self,
+        uow: IUoW,
+        catalog_client: CatalogClient,
+        payment_client: PaymentClient,
+        notification_client: NotifyClient,
+    ):
         """Inject required infrastructure and domain dependencies."""
         self.uow = uow
         self.catalog_client = catalog_client
@@ -24,11 +33,11 @@ class CreateOrderUseCase:
     ):
         """Execute the complete order creation workflow."""
         logger.info(
-            "Initiating order creation flow",
+            "CREATION USECASE | Initiating order creation flow",
             user_id=user_id,
-            item_id=str(item_id),
+            item_id=item_id,
             quantity=quantity,
-            idempotency_key=str(idempotency_key),
+            idempotency_key=idempotency_key,
         )
 
         async with self.uow as uow:
@@ -37,8 +46,8 @@ class CreateOrderUseCase:
             if existing_order:
                 logger.warning(
                     "Duplicate request detected",
-                    order_id=str(existing_order.id),
-                    idempotency_key=str(idempotency_key),
+                    order_id=existing_order.id,
+                    idempotency_key=idempotency_key,
                 )
                 return existing_order
 
@@ -53,7 +62,7 @@ class CreateOrderUseCase:
             order_id = uuid.uuid4()
             try:
                 payment_result = await self.payment_client.create(
-                    order_id=str(order_id),  # str(item_id),
+                    order_id=str(order_id),
                     amount="100.00",
                     idempotency_key=str(idempotency_key),
                 )
@@ -71,7 +80,7 @@ class CreateOrderUseCase:
             await uow.commit()
 
             logger.info(
-                "Order persisted successfully",
+                "CREATION USECASE | Order persisted successfully",
                 order_id=str(order.id),
                 payment_id=str(order.payment_id),
             )

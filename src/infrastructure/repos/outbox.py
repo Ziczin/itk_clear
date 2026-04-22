@@ -16,7 +16,7 @@ class OutboxRepo(IOutboxRepo):
     async def add(self, entry):
         """Queue a new event entry for asynchronous publishing."""
         logger.info(
-            "Adding entry to outbox",
+            "OUTBOX REPO | Adding entry to outbox",
             id=entry.id,
             event_type=entry.event_type,
             payload=entry.payload,

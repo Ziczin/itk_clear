@@ -1,4 +1,5 @@
 from sqlalchemy import select
+
 from src.application.ports.inbox_repo import IInboxRepo
 from src.infrastructure.models.inbox import InboxDB
 from src.utils.logger import logger
@@ -17,7 +18,7 @@ class InboxRepo(IInboxRepo):
             entry_id=entry.id,
             idempotency_key=entry.idempotency_key,
         )
-        db_entry = InboxDB(id=entry.id, idempotency_key=entry.idempotency_key)
+        db_entry = InboxDB(id=entry.id, idempotency_key=str(entry.idempotency_key))
         self.session.add(db_entry)
 
     async def exists(self, idempotency_key: str) -> bool:

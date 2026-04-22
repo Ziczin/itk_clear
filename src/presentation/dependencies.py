@@ -1,11 +1,12 @@
 from fastapi import Depends, Request
-from src.infrastructure.uow import UoW
-from src.infrastructure.clients.catalog import CatalogClient
-from src.infrastructure.clients.payment import PaymentClient
-from src.infrastructure.clients.notify import NotifyClient
+
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
 from src.application.usecases.payment_callback import PaymentCallbackUseCase
+from src.infrastructure.clients.catalog import CatalogClient
+from src.infrastructure.clients.notify import NotifyClient
+from src.infrastructure.clients.payment import PaymentClient
+from src.infrastructure.uow import UoW
 from src.utils.logger import logger
 
 
@@ -16,7 +17,7 @@ def provide_unit_of_work():
 
 def provide_http_session(request: Request):
     """Retrieve shared aiohttp client session from application state."""
-    logger.info("Retrieving HTTP session from application state")
+    logger.info("DEPENDENCY | Retrieving HTTP session from application state")
     return request.app.state.http_session
 
 

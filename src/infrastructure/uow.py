@@ -1,8 +1,8 @@
 from src.application.ports.uow import IUoW
 from src.infrastructure.database import async_session_maker
+from src.infrastructure.repos.inbox import InboxRepo
 from src.infrastructure.repos.order import OrderRepo
 from src.infrastructure.repos.outbox import OutboxRepo
-from src.infrastructure.repos.inbox import InboxRepo
 from src.utils.logger import logger
 
 
@@ -21,18 +21,16 @@ class UoW(IUoW):
         self._orders.session = self.session
         self._outbox.session = self.session
         self._inbox.session = self.session
-        # logger.debug("UoW session opened")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Close database session upon context exit."""
         await self.session.close()
-        # logger.debug("UoW session closed")
 
     async def commit(self):
         """Persist all staged changes to the database."""
         await self.session.commit()
-        logger.debug("UoW transaction committed")
+        logger.debug("UNIT OF WORK | UoW transaction committed")
 
     async def rollback(self):
         """Revert all staged changes in the current session."""

@@ -1,14 +1,13 @@
 # logger_config.py
-from contextvars import ContextVar
-from typing import Optional, List
-import uuid
-import sys
 import json
-from datetime import datetime, timezone
 import os
+import sys
+import uuid
+from contextvars import ContextVar
+from datetime import datetime, timezone
+from typing import List, Optional
 
 from loguru import logger as _loguru_logger
-
 
 _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
 
