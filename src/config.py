@@ -1,6 +1,6 @@
-from typing import Any, Optional
+from typing import Optional
 
-from pydantic import HttpUrl, field_validator
+from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,7 +13,7 @@ class Config(BaseSettings):
     POSTGRES_USERNAME: str
     POSTGRES_PASSWORD: str
 
-    DATABASE_URL: str
+    DATABASE_URL: str | None = None
 
     KAFKA_BOOTSTRAP_SERVERS: str
 
@@ -32,20 +32,6 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    @field_validator("DATABASE_URL", mode="before")
-    @classmethod
-    def build_database_url(cls, v: str | None, info: Any) -> str:
-        """Build DATABASE_URL from individual PostgreSQL parameters if not provided."""
-        if v:
-            return v
-        data = info.data
-        return (
-            f"postgresql+asyncpg://"
-            f"{data['POSTGRES_USERNAME']}:{data['POSTGRES_PASSWORD']}@"
-            f"{data['POSTGRES_HOST']}:{data['POSTGRES_PORT']}/"
-            f"{data['POSTGRES_DATABASE_NAME']}"
-        )
-
     @property
     def CATALOG_URL(self) -> str:
         return str(self._CATALOG_URL).rstrip("/")
@@ -63,10 +49,22 @@ class Config(BaseSettings):
         return str(self._PAYMENTS_CALLBACK_URL).rstrip("/")
 
     @property
+    def DATABASE_URL_STRING(self) -> str:
+        """Guaranteed string version of DATABASE_URL for runtime usage."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return (
+            f"postgresql+asyncpg://"
+            f"{self.POSTGRES_USERNAME}:{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/"
+            f"{self.POSTGRES_DATABASE_NAME}"
+        )
+
+    @property
     def DATABASE_URL_SYNC(self) -> str:
         """Return sync version of DATABASE_URL for Alembic CLI."""
-        url = self.DATABASE_URL
-        if url and "postgresql+asyncpg://" in url:
+        url = self.DATABASE_URL_STRING
+        if "postgresql+asyncpg://" in url:
             return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
         return (
             f"postgresql+psycopg2://"
