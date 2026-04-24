@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 
 def utc_datettime() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class OrderStatus(str, Enum):

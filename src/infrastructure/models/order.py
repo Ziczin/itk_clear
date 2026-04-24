@@ -7,7 +7,7 @@ from src.infrastructure.database import Base
 
 
 def utc_datettime() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class OrderDB(Base):
