@@ -27,12 +27,30 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             logger.info(f"MIDDLEWARE | Incoming request | {method} {path}")
 
         try:
-            response = await call_next(request)
+            response: Response = await call_next(request)
 
             if do_log:
                 logger.info(
                     f"MIDDLEWARE | Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
                 )
+
+                response_body = b""
+                async for chunk in response.body_iterator:  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
+                    response_body += chunk  # pyright: ignore[reportUnknownVariableType]
+
+                response = Response(
+                    content=response_body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
+
+                if response_body:
+                    logger.info(
+                        f"MIDDLEWARE | Response body | {method} {path}",
+                        body=response_body.decode("utf-8", errors="replace"),  # pyright: ignore[reportUnknownMemberType]
+                    )
+
             return response
 
         except Exception as exc:
