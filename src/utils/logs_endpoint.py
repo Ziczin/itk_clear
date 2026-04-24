@@ -1,5 +1,3 @@
-from typing import Any
-
 from fastapi import Response
 
 from src.utils.logger import get_logs_jsonl
