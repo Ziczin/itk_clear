@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import HttpUrl
+from pydantic import HttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,10 +19,10 @@ class Config(BaseSettings):
 
     CAPASHINO_API_KEY: str
 
-    _CATALOG_URL: HttpUrl
-    _PAYMENTS_URL: HttpUrl
-    _NOTIFICATIONS_URL: HttpUrl
-    _PAYMENTS_CALLBACK_URL: HttpUrl
+    CATALOG_URL: str
+    PAYMENTS_URL: str
+    NOTIFICATIONS_URL: str
+    PAYMENTS_CALLBACK_URL: str
 
     PAYMENTS_RETRY_LIMIT: int = 5
     PAYMENTS_START_TIMEOUT: float = 1.0
@@ -32,21 +32,18 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    @property
-    def CATALOG_URL(self) -> str:
-        return str(self._CATALOG_URL).rstrip("/")
-
-    @property
-    def PAYMENTS_URL(self) -> str:
-        return str(self._PAYMENTS_URL).rstrip("/")
-
-    @property
-    def NOTIFICATIONS_URL(self) -> str:
-        return str(self._NOTIFICATIONS_URL).rstrip("/")
-
-    @property
-    def PAYMENTS_CALLBACK_URL(self) -> str:
-        return str(self._PAYMENTS_CALLBACK_URL).rstrip("/")
+    @field_validator(
+        "CATALOG_URL",
+        "PAYMENTS_URL",
+        "NOTIFICATIONS_URL",
+        "PAYMENTS_CALLBACK_URL",
+        mode="before",
+    )
+    @classmethod
+    def validate_and_strip_url(cls, v: str) -> str:
+        """Validate URL format and strip trailing slash."""
+        HttpUrl(v)
+        return v.rstrip("/")
 
     @property
     def DATABASE_URL_STRING(self) -> str:
