@@ -132,7 +132,8 @@ async def get_order(
         order = await use_case.execute(order_id=order_id)
 
         logger.debug(
-            r"ROUTE ORDER GETTING | Route /api/orders/{order_id} returns 200",
+            "ROUTE ORDER GETTING | Route /api/orders/{{order_id}} returns 200",
+            order_id=str(order_id),
             status=order.status,
         )
 
