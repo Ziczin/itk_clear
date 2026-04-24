@@ -30,10 +30,6 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
 
             if do_log:
-                logger.info(
-                    f"MIDDLEWARE | Request completed | {method} {path} | status={response.status_code} | request_id={request_id}"
-                )
-
                 response_body = b""
                 async for chunk in response.body_iterator:  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
                     response_body += chunk  # pyright: ignore[reportUnknownVariableType]
@@ -47,7 +43,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
                 if response_body:
                     logger.info(
-                        f"MIDDLEWARE | Response body | {method} {path}",
+                        f"MIDDLEWARE | Request completed | {method} {path} with code {response.status_code}",
                         body=response_body.decode("utf-8", errors="replace"),  # pyright: ignore[reportUnknownMemberType]
                     )
 
@@ -56,7 +52,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             if do_log:
                 logger.exception(
-                    f"Request failed | {method} {path} | request_id={request_id}",
+                    f"Request failed | {method} {path}",
                     exc_info=exc,
                 )
             raise
