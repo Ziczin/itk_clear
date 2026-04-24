@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -81,12 +80,10 @@ class ShipmentEventUseCase:
                 new_status=order.status,
             )
 
-            asyncio.create_task(
-                self._send_notification_safe(
-                    message=notification_message,
-                    reference_id=str(order.id),
-                    idempotency_key=str(idempotency_key),
-                )
+            await self._send_notification_safe(
+                message=notification_message,
+                reference_id=str(order.id),
+                idempotency_key=str(idempotency_key),
             )
 
     async def _send_notification_safe(

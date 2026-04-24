@@ -1,4 +1,3 @@
-import asyncio
 from uuid import UUID
 
 from src.application.ports.order_repo import OrderNotFoundError
@@ -63,12 +62,10 @@ class PaymentCallbackUseCase:
                     order_id=str(order.id),
                 )
 
-                asyncio.create_task(
-                    self._send_notification_safe(
-                        message="Ваш заказ успешно оплачен и готов к отправке",
-                        reference_id=str(order.id),
-                        idempotency_key=str(idempotency_key),
-                    )
+                await self._send_notification_safe(
+                    message="Ваш заказ успешно оплачен и готов к отправке",
+                    reference_id=str(order.id),
+                    idempotency_key=str(idempotency_key),
                 )
 
             else:
@@ -81,12 +78,10 @@ class PaymentCallbackUseCase:
                     reason=reason,
                 )
 
-                asyncio.create_task(
-                    self._send_notification_safe(
-                        message=f"Ваш заказ отменен. Причина: {reason}",
-                        reference_id=str(order_id),
-                        idempotency_key=str(idempotency_key),
-                    )
+                await self._send_notification_safe(
+                    message=f"Ваш заказ отменен. Причина: {reason}",
+                    reference_id=str(order_id),
+                    idempotency_key=str(idempotency_key),
                 )
 
             await uow.orders.update(order)
