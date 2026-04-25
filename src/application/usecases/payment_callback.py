@@ -1,113 +1,117 @@
-import logging
-import uuid
-from typing import Optional
+from uuid import UUID, uuid4
 
-from src.domain.entities.order import OrderStatus
-from src.domain.exceptions import DomainException
-from src.domain.repositories.order import OrderRepository
-from src.domain.repositories.outbox import OutboxRepository
-from src.domain.services.notification import NotificationService
-
-from src.infrastructure.uow import UnitOfWork
-
-logger = logging.getLogger(__name__)
+from src.application.ports.order_repo import OrderNotFoundError
+from src.application.ports.uow import IUoW
+from src.domain.outbox import OutboxEntry
+from src.infrastructure.clients.notify import NotifyClient
+from src.utils.logger import logger
 
 
 class PaymentCallbackUseCase:
-    def __init__(
-        self,
-        order_repo: OrderRepository,
-        outbox_repo: OutboxRepository,
-        notification_service: NotificationService,
-        uow: UnitOfWork,
-    ):
-        self.order_repo = order_repo
-        self.outbox_repo = outbox_repo
-        self.notification_service = notification_service
+    """Application service handling external payment gateway responses."""
+
+    def __init__(self, uow: IUoW, notification_client: NotifyClient):
+        """Inject transactional unit and notification dependencies."""
         self.uow = uow
+        self.notification_client = notification_client
 
     async def execute(
         self,
-        order_id: str,
-        payment_id: str,
+        order_id: UUID,
         payment_status: str,
-        amount: Optional[str] = None,
-        error_message: Optional[str] = None,
+        payment_id: UUID,
+        idempotency_key: str | None = None,
     ) -> None:
+        """Process payment result and transition order state accordingly."""
         logger.info(
             "CALLBACK USECASE | Processing payment result",
-            extra={
-                "order_id": order_id,
-                "payment_status": payment_status,
-                "payment_id": payment_id,
-            },
+            order_id=str(order_id),
+            payment_status=payment_status,
+            payment_id=str(payment_id),
         )
 
-        async with self.uow:
-            order = await self.order_repo.get(order_id)
-            if not order:
-                raise DomainException(f"Order {order_id} not found")
+        # Генерируем свой idempotency_key для события, если не передан или некорректен
+        event_idempotency_key = idempotency_key
+        if not event_idempotency_key or event_idempotency_key.startswith("Backend:"):
+            event_idempotency_key = str(uuid4())
+
+        async with self.uow as uow:
+            order = await uow.orders.get(order_id=order_id)
+
+            if order is None:
+                logger.error(
+                    "USECASE CALLBACK | Order not found for callback",
+                    order_id=str(order_id),
+                )
+                raise OrderNotFoundError()
 
             if payment_status == "succeeded":
-                order.status = OrderStatus.PAID
+                order.transition_to_paid()
 
-                # Генерируем idempotency_key, если он не передан
-                idempotency_key = str(uuid.uuid4())
-
-                # Создаем событие для отправки в Kafka
-                event_payload = {
-                    "event_type": "order.paid",
-                    "order_id": order.id,
-                    "item_id": order.item_id,
-                    "quantity": order.quantity,
-                    "idempotency_key": idempotency_key,
-                }
-
-                # Сохраняем событие в outbox
-                await self.outbox_repo.add(
+                event = OutboxEntry(
                     event_type="order.paid",
-                    payload=event_payload,
-                    idempotency_key=idempotency_key,
+                    payload={
+                        "event_type": "order.paid",
+                        "order_id": str(order.id),
+                        "item_id": str(order.item_id),
+                        "quantity": order.quantity,
+                        "idempotency_key": event_idempotency_key,
+                    },
+                    idempotency_key=event_idempotency_key,
                 )
+
+                await uow.outbox.add(entry=event)
 
                 logger.info(
                     "CALLBACK USECASE | Order marked paid and outbox record created",
-                    extra={"order_id": order.id},
+                    order_id=str(order.id),
                 )
 
-                # Отправляем уведомление об успешной оплате
-                await self.notification_service.send(
+                await self._send_notification_safe(
                     message="Ваш заказ успешно оплачен и готов к отправке",
-                    reference_id=order.id,
-                    idempotency_key=idempotency_key,
+                    reference_id=str(order.id),
+                    idempotency_key=f"{event_idempotency_key}:paid",
                 )
 
-            elif payment_status == "failed":
-                order.status = OrderStatus.CANCELLED
-
-                # Генерируем idempotency_key для уведомления об отмене
-                idempotency_key = str(uuid.uuid4())
-
-                reason = error_message or "Payment failed"
-
-                # Отправляем уведомление об отмене
-                await self.notification_service.send(
-                    message=f"Ваш заказ отменен. Причина: {reason}",
-                    reference_id=order.id,
-                    idempotency_key=idempotency_key,
-                )
-
-                logger.info(
-                    "CALLBACK USECASE | Order cancelled due to payment failure",
-                    extra={"order_id": order.id, "reason": reason},
-                )
             else:
-                raise DomainException(f"Unknown payment status: {payment_status}")
+                order.transition_to_cancelled()
+                reason = "Payment failed"
+                cancellation_idempotency_key = f"{event_idempotency_key}:cancelled"
 
-            # Обновляем заказ в БД
-            await self.order_repo.update(order)
+                logger.warning(
+                    "USECASE CALLBACK | Order cancelled due to payment failure",
+                    order_id=str(order_id),
+                    reason=reason,
+                )
 
-        logger.info(
-            "CALLBACK USECASE | Callback processing completed",
-            extra={"order_id": order.id, "new_status": order.status},
-        )
+                await self._send_notification_safe(
+                    message=f"Ваш заказ отменен. Причина: {reason}",
+                    reference_id=str(order_id),
+                    idempotency_key=cancellation_idempotency_key,
+                )
+
+            await uow.orders.update(order)
+            await uow.commit()
+
+            logger.info(
+                "CALLBACK USECASE | Callback processing completed",
+                order_id=str(order_id),
+                new_status=order.status,
+            )
+
+    async def _send_notification_safe(
+        self, message: str, reference_id: str, idempotency_key: str
+    ) -> None:
+        """Send notification without blocking the main flow."""
+        try:
+            await self.notification_client.send(
+                message=message,
+                reference_id=reference_id,
+                idempotency_key=idempotency_key,
+            )
+        except Exception as e:
+            logger.error(
+                "USECASE CALLBACK | Failed to send notification (non-blocking)",
+                error=str(e),
+                reference_id=reference_id,
+            )
