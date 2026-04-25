@@ -57,13 +57,12 @@ class ShipmentEventUseCase:
 
             if event_type == "order.shipped":
                 order.transition_to_shipped()
-                notification_message = "Ваш заказ отправлен в доставку"
+                notification_message = "SHIPPED"
                 notification_idempotency_key = f"{idempotency_key}:shipped"
 
             elif event_type == "order.cancelled":
                 order.transition_to_cancelled()
-                reason = event_data.get("reason", "unknown")
-                notification_message = f"Ваш заказ отменен. Причина: {reason}"
+                notification_message = "CANCELLED"
                 notification_idempotency_key = f"{idempotency_key}:cancelled"
 
             else:

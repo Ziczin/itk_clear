@@ -68,7 +68,7 @@ class PaymentCallbackUseCase:
                 )
 
                 await self._send_notification_safe(
-                    message="Ваш заказ успешно оплачен и готов к отправке",
+                    message="PAID",
                     reference_id=str(order.id),
                     idempotency_key=f"{event_idempotency_key}:paid",
                 )

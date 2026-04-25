@@ -91,7 +91,7 @@ class CreateOrderUseCase:
             )
 
             await self._send_notification_safe(
-                message="Ваш заказ создан и ожидает оплаты",
+                message="NEW",
                 reference_id=str(order.id),
                 idempotency_key=f"{idempotency_key}:new",
             )
