@@ -62,11 +62,11 @@ class NotifyClient:
             "Content-Type": "application/json",
         }
 
-        logger.debug(
-            "NOTIFY CLIENT | Try to dispatch notification",
-            url=url,
-            payload=payload,
-            headers=headers,
+        logger.info(
+            "NOTIFY CLIENT | Sending notification",
+            message=message,
+            reference_id=reference_id,
+            idempotency_key=idempotency_key,
         )
 
         try:
