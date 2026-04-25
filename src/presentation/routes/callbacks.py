@@ -26,8 +26,7 @@ async def payment_callback(
             order_id=callback.order_id,
             payment_status=callback.status,
             payment_id=callback.payment_id,
-            idempotency_key=callback.idempotency_key
-            or "Backend: There is no idempotensy key provided",
+            idempotency_key=callback.idempotency_key,
         )
 
         logger.info(
