@@ -65,12 +65,13 @@ class PaymentCallbackUseCase:
                 await self._send_notification_safe(
                     message="Ваш заказ успешно оплачен и готов к отправке",
                     reference_id=str(order.id),
-                    idempotency_key=str(idempotency_key),
+                    idempotency_key=f"{idempotency_key}:paid",
                 )
 
             else:
                 order.transition_to_cancelled()
                 reason = "Payment failed"
+                cancellation_idempotency_key = f"{idempotency_key}:cancelled"
 
                 logger.warning(
                     "USECASE CALLBACK | Order cancelled due to payment failure",
@@ -81,7 +82,7 @@ class PaymentCallbackUseCase:
                 await self._send_notification_safe(
                     message=f"Ваш заказ отменен. Причина: {reason}",
                     reference_id=str(order_id),
-                    idempotency_key=str(idempotency_key),
+                    idempotency_key=cancellation_idempotency_key,
                 )
 
             await uow.orders.update(order)

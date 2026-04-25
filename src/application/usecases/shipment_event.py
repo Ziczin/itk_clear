@@ -53,15 +53,18 @@ class ShipmentEventUseCase:
                 raise OrderNotFoundError()
 
             notification_message = ""
+            notification_idempotency_key = str(idempotency_key)
 
             if event_type == "order.shipped":
                 order.transition_to_shipped()
                 notification_message = "Ваш заказ отправлен в доставку"
+                notification_idempotency_key = f"{idempotency_key}:shipped"
 
             elif event_type == "order.cancelled":
                 order.transition_to_cancelled()
                 reason = event_data.get("reason", "unknown")
                 notification_message = f"Ваш заказ отменен. Причина: {reason}"
+                notification_idempotency_key = f"{idempotency_key}:cancelled"
 
             else:
                 logger.warning(
@@ -83,7 +86,7 @@ class ShipmentEventUseCase:
             await self._send_notification_safe(
                 message=notification_message,
                 reference_id=str(order.id),
-                idempotency_key=str(idempotency_key),
+                idempotency_key=notification_idempotency_key,
             )
 
     async def _send_notification_safe(
