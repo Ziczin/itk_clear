@@ -33,6 +33,8 @@ class KafkaProducerWrapper:
         if self.producer is None:
             raise RuntimeError("Producer not started")
 
+        msg_data = {"topic": topic, "key": key, "value": value}
+        logger.info("KAFKA | Sending message to Kafka", data=msg_data)
         await self.producer.send_and_wait(
             topic, key=key.encode(), value=json.dumps(value).encode()
         )
