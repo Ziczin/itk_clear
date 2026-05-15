@@ -1,5 +1,4 @@
 from types import TracebackType
-from typing import Type  # Нужно только для Type[BaseException] в __aexit__
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +32,7 @@ class UoW(IUoW):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

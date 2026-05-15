@@ -39,7 +39,7 @@ class InboxRepo(IInboxRepo):
             select(InboxDB).where(InboxDB.idempotency_key == idempotency_key)
         )
         exists = result.scalar_one_or_none() is not None
-        logger.info(f"INBOX REPO | Entry {'exist' if exists else 'NOT exist'}")
+        logger.info("INBOX REPO | Entry %s", "exist" if exists else "NOT exist")
         return exists
 
     async def get_by_idempotency_key(self, key: str) -> InboxEntry | None:

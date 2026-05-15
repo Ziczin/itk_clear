@@ -90,7 +90,6 @@ class PaymentCallbackUseCase:
                 )
 
             await uow.orders.update(order)
-            await uow.commit()
 
             logger.info(
                 "CALLBACK USECASE | Callback processing completed",

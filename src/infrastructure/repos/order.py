@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from src.domain.order import OrderStatus
 from src.application.ports.order_repo import IOrderRepo
 from src.domain.order import Order
 from src.infrastructure.models.order import OrderDB
@@ -86,7 +86,6 @@ class OrderRepo(IOrderRepo):
 
     def _map_to_domain(self, db_model: OrderDB) -> Order:
         """Convert a SQLAlchemy ORM model to a domain order entity."""
-        from src.domain.order import OrderStatus
 
         return Order(
             id=db_model.id,  # type: ignore[arg-type]

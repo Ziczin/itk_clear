@@ -74,7 +74,6 @@ class ShipmentEventUseCase:
 
             await uow.inbox.add(entry=InboxEntry(idempotency_key=idempotency_key))
             await uow.orders.update(order)
-            await uow.commit()
 
             logger.info(
                 "SHIPMENT USECASE | Shipment event processed and committed",

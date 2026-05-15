@@ -74,7 +74,6 @@ class OutboxPublisher:
                                     value=event.payload,
                                 )
                                 await uow.outbox.mark_as_published(entry_id=event.id)
-                                await uow.commit()
                                 logger.info(
                                     "MESSAGING | Outbox event published",
                                     event_id=str(event.id),
