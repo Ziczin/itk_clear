@@ -11,12 +11,6 @@ class OrderNotFoundError(BaseAppError):
     default_message = "Order entity not found"
 
 
-class OrderDuplicateError(BaseAppError):
-    """Raised when an idempotency key collision is detected."""
-
-    default_message = "Idempotency key already used"
-
-
 class IOrderRepo(ABC):
     """Abstract interface for order persistence operations."""
 

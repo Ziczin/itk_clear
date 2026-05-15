@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.application.ports.order_repo import OrderDuplicateError, OrderNotFoundError
+from src.application.ports.order_repo import OrderNotFoundError
 from src.application.usecases.create_order import CreateOrderUseCase
 from src.application.usecases.get_order import GetOrderUseCase
 from src.infrastructure.clients.catalog import (
@@ -64,44 +64,13 @@ async def create_order(
         )
         return order_response
 
-    except OrderDuplicateError as e:
-        logger.warning(
-            "ROUTE /api/orders | Duplicate order request",
-            idempotency_key=str(request.idempotency_key),
-            error=str(e),
-        )
-
-        existing = await use_case.uow.orders.get_by_idempotency_key(
-            request.idempotency_key
-        )
-
-        if existing:
-            logger.debug(
-                "CALLBACK ROUTE | POST /api/orders | returns 200, existing order"
-            )
-            return OrderResponse(
-                id=existing.id,
-                user_id=existing.user_id,
-                item_id=existing.item_id,
-                quantity=existing.quantity,
-                status=existing.status,
-                created_at=existing.created_at.isoformat(),
-                updated_at=existing.updated_at.isoformat(),
-            )
-
-        logger.debug("CALLBACK ROUTE | POST /api/orders | returns 409")
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Idempotency key already used",
-        )
+    except ItemNotFoundInCatalogError as e:
+        logger.error("ROUTE /api/orders | Item ", error=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except (CatalogServiceError, PaymentServiceError) as e:
         logger.error("ROUTE /api/orders | External service error", error=str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-    except ItemNotFoundInCatalogError as e:
-        logger.error("ROUTE /api/orders | Item ", error=str(e))
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except OrderNotFoundError as e:
         logger.error(

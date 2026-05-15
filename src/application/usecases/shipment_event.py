@@ -4,14 +4,14 @@ from uuid import UUID, uuid4
 from src.application.ports.order_repo import OrderNotFoundError
 from src.application.ports.uow import IUoW
 from src.domain.inbox import InboxEntry
-from src.infrastructure.clients.notify import NotifyClient
+from src.application.ports.notify_client import INotifyClient
 from src.utils.logger import logger
 
 
 class ShipmentEventUseCase:
     """Application service for processing shipping service Kafka events."""
 
-    def __init__(self, uow: IUoW, notification_client: NotifyClient):
+    def __init__(self, uow: IUoW, notification_client: INotifyClient):
         """Inject transactional unit and notification dependencies."""
         self.uow = uow
         self.notification_client = notification_client

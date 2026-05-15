@@ -5,15 +5,10 @@ import tenacity
 
 from src.config import settings
 from src.utils.logger import logger
+from src.application.ports.notify_client import INotifyClient, NotifyServiceError
 
 
-class NotificationServiceError(Exception):
-    """Raised when notification service returns an error."""
-
-    ...
-
-
-class NotifyClient:
+class NotifyClient(INotifyClient):
     """HTTP client for user notification dispatch operations."""
 
     def __init__(self, session: aiohttp.ClientSession) -> None:
@@ -21,7 +16,7 @@ class NotifyClient:
         self.session = session
 
     @tenacity.retry(
-        retry=tenacity.retry_if_exception_type(NotificationServiceError),
+        retry=tenacity.retry_if_exception_type(NotifyServiceError),
         stop=tenacity.stop_after_attempt(5),
         wait=tenacity.wait_incrementing(start=1, increment=1, max=20),
     )
@@ -41,9 +36,7 @@ class NotifyClient:
                     error=error_text,
                     reference_id=reference_id,
                 )
-                raise NotificationServiceError(
-                    f"status={response.status} body={error_text}"
-                )
+                raise NotifyServiceError(f"status={response.status} body={error_text}")
             logger.info("NOTIFY CLIENT | Notification sent", reference_id=reference_id)
             return True
 
@@ -73,7 +66,7 @@ class NotifyClient:
             return await self._send_notification_safe(
                 url, payload, headers, reference_id
             )
-        except NotificationServiceError as e:
+        except NotifyServiceError as e:
             logger.error(
                 "NOTIFY CLIENT | Final failure after retries",
                 error=str(e),

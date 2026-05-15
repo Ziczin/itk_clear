@@ -1,3 +1,4 @@
+# type: ignore
 import asyncio
 from typing import Any
 
@@ -9,15 +10,10 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+from src.application.ports.payment_client import PaymentServiceError, IPaymentClient
 
 from src.config import settings
 from src.utils.logger import logger
-
-
-class PaymentServiceError(Exception):
-    """Raised when payment service returns an error."""
-
-    ...
 
 
 def setup_retry_decorator(order_id: str):
@@ -52,7 +48,7 @@ def setup_retry_decorator(order_id: str):
     )
 
 
-class PaymentClient:
+class PaymentClient(IPaymentClient):
     """HTTP client for payment gateway communication."""
 
     def __init__(self, session: aiohttp.ClientSession) -> None:

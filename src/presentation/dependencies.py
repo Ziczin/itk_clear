@@ -7,6 +7,9 @@ from src.application.usecases.payment_callback import PaymentCallbackUseCase
 from src.infrastructure.clients.catalog import CatalogClient
 from src.infrastructure.clients.notify import NotifyClient
 from src.infrastructure.clients.payment import PaymentClient
+from src.application.ports.catalog_client import ICatalogClient
+from src.application.ports.notify_client import INotifyClient
+from src.application.ports.payment_client import IPaymentClient
 from src.infrastructure.uow import UoW
 from src.utils.logger import logger
 
@@ -24,30 +27,30 @@ def provide_http_session(request: Request) -> ClientSession:
 
 def provide_catalog_client(
     session: ClientSession = Depends(provide_http_session),
-) -> CatalogClient:
+) -> ICatalogClient:
     """Construct catalog HTTP client with injected session."""
     return CatalogClient(session=session)
 
 
 def provide_payment_client(
     session: ClientSession = Depends(provide_http_session),
-) -> PaymentClient:
+) -> IPaymentClient:
     """Construct payment HTTP client with injected session."""
     return PaymentClient(session=session)
 
 
 def provide_notification_client(
     session: ClientSession = Depends(provide_http_session),
-) -> NotifyClient:
+) -> INotifyClient:
     """Construct notification HTTP client with injected session."""
     return NotifyClient(session=session)
 
 
 def provide_create_order_use_case(
     uow: UoW = Depends(provide_unit_of_work),
-    catalog: CatalogClient = Depends(provide_catalog_client),
-    payment: PaymentClient = Depends(provide_payment_client),
-    notify: NotifyClient = Depends(provide_notification_client),
+    catalog: ICatalogClient = Depends(provide_catalog_client),
+    payment: IPaymentClient = Depends(provide_payment_client),
+    notify: INotifyClient = Depends(provide_notification_client),
 ) -> CreateOrderUseCase:
     """Assemble order creation use case with all required dependencies."""
     return CreateOrderUseCase(
@@ -67,7 +70,7 @@ def provide_get_order_use_case(
 
 def provide_payment_callback_use_case(
     uow: UoW = Depends(provide_unit_of_work),
-    notify: NotifyClient = Depends(provide_notification_client),
+    notify: INotifyClient = Depends(provide_notification_client),
 ) -> PaymentCallbackUseCase:
     """Assemble payment callback processing use case with dependencies."""
     return PaymentCallbackUseCase(uow=uow, notification_client=notify)

@@ -4,9 +4,9 @@ from uuid import UUID
 
 from src.application.ports.uow import IUoW
 from src.domain.order import Order
-from src.infrastructure.clients.catalog import CatalogClient, CatalogServiceError
-from src.infrastructure.clients.notify import NotifyClient
-from src.infrastructure.clients.payment import PaymentClient, PaymentServiceError
+from src.application.ports.catalog_client import ICatalogClient, CatalogServiceError
+from src.application.ports.notify_client import INotifyClient
+from src.application.ports.payment_client import IPaymentClient, PaymentServiceError
 from src.utils.logger import logger
 
 
@@ -16,9 +16,9 @@ class CreateOrderUseCase:
     def __init__(
         self,
         uow: IUoW,
-        catalog_client: CatalogClient,
-        payment_client: PaymentClient,
-        notification_client: NotifyClient,
+        catalog_client: ICatalogClient,
+        payment_client: IPaymentClient,
+        notification_client: INotifyClient,
     ):
         """Inject required infrastructure and domain dependencies."""
         self.uow = uow
